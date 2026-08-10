@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Api must not compile against Domain, not even via Connectors/MarketData. -->
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- No Domain reference on purpose: module contracts own their result types,
+         so the domain model stays a private implementation detail of the modules. -->
+    <ProjectReference Include="..\PortfolioTrackerApp.Connectors\PortfolioTrackerApp.Connectors.csproj" />
+    <ProjectReference Include="..\PortfolioTrackerApp.MarketData\PortfolioTrackerApp.MarketData.csproj" />
+  </ItemGroup>
+
+</Project>

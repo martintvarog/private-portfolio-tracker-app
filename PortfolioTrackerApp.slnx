@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PortfolioTrackerApp.Api/PortfolioTrackerApp.Api.csproj" />
+    <Project Path="src/PortfolioTrackerApp.Connectors/PortfolioTrackerApp.Connectors.csproj" />
+    <Project Path="src/PortfolioTrackerApp.Domain/PortfolioTrackerApp.Domain.csproj" />
+    <Project Path="src/PortfolioTrackerApp.MarketData/PortfolioTrackerApp.MarketData.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PortfolioTrackerApp.Connectors.Tests/PortfolioTrackerApp.Connectors.Tests.csproj" />
+    <Project Path="tests/PortfolioTrackerApp.Domain.Tests/PortfolioTrackerApp.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
