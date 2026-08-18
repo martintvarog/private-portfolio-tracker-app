@@ -1,9 +1,10 @@
+using PortfolioTrackerApp.Connectors;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
-// Module registration goes here as modules gain services:
-// builder.Services.AddConnectorsModule(builder.Configuration);
+builder.Services.AddConnectorsModule();
 // builder.Services.AddMarketDataModule(builder.Configuration);
 
 var app = builder.Build();
