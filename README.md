@@ -6,9 +6,9 @@ Privacy-first, local-first net-worth and portfolio tracker (working title). The 
 
 ```
 ├── src/
-│   ├── PortfolioTrackerApp.Api/          # host: DI composition root + thin HTTP endpoints
+│   ├── PortfolioTrackerApp.Api/          # host: DI composition root + thin HTTP endpoints (POST /sync, GET /health)
 │   ├── PortfolioTrackerApp.Domain/       # pure business rules (Money, Asset, Position) — references nothing
-│   ├── PortfolioTrackerApp.Connectors/   # capability module: sync holdings from banks/brokers/chains
+│   ├── PortfolioTrackerApp.Connectors/   # capability module: Contracts/ (IConnector) + Fio/ (implemented)
 │   └── PortfolioTrackerApp.MarketData/   # capability module: prices & FX (Postgres + EF Core)
 ├── tests/                                # xUnit test projects (Domain, Connectors contract suite)
 ├── client/                               # React + Vite + TS + TanStack Query — owns the aggregate: vault, snapshots, valuation
@@ -27,6 +27,11 @@ The backend is a stateless specialist: it normalizes institution responses into 
 Api ──► Connectors ──► Domain
     ──► MarketData ──► Domain          Api ──► Domain: compile error, by design
 ```
+
+## API
+
+- `POST /sync` — `{ "source": "fio", "credential": "<token>" }` → `ConnectorSyncResult`. One connector per call; the client parallelizes. Connector outcomes (invalid credential, bank down, rate limited) come as `status` inside a 200; HTTP 400 (ProblemDetails) only for malformed requests (ADR-0005).
+- `GET /health`
 
 ## Getting started
 
