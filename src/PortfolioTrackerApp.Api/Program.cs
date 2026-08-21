@@ -1,3 +1,4 @@
+using PortfolioTrackerApp.Api.Sync;
 using PortfolioTrackerApp.Connectors;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,5 +16,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+app.MapSyncEndpoints();
 
 app.Run();
