@@ -1,9 +1,14 @@
-import { useState } from 'react'
 import { HoldingsTable } from '../holdings/HoldingsTable'
 import type { Holding } from '../holdings/types'
 import { SyncForm } from '../sync/SyncForm'
 import type { ConnectorSyncResult } from '../../lib/api'
+import type { VaultData } from '../../lib/vault'
 import { NetWorthCard } from './NetWorthCard'
+
+type Props = {
+  data: VaultData
+  onDataChange: (data: VaultData) => void
+}
 
 // Wire → view mapping. CZK cash is valued 1:1; everything else needs
 // MarketData prices/FX (step: valuation) and stays unvalued for now.
@@ -23,15 +28,24 @@ function toHoldings(result: ConnectorSyncResult): Holding[] {
   }))
 }
 
-export function DashboardPage() {
-  const [holdings, setHoldings] = useState<Holding[]>([])
+export function DashboardPage({ data, onDataChange }: Props) {
+  // No holdings state here anymore: the vault's raw syncResults are the facts,
+  // everything below is derived fresh on every render.
+  const holdings = data.syncResults.flatMap(toHoldings)
 
-  const handleSynced = (result: ConnectorSyncResult) => {
-    // Re-syncing a source replaces its holdings, never duplicates them.
-    setHoldings((previous) => [
-      ...previous.filter((h) => h.sourceId !== result.source),
-      ...toHoldings(result),
-    ])
+  const handleSynced = (result: ConnectorSyncResult, credential: string) => {
+    // Re-syncing a source replaces its results and its stored credential
+    // (matched by source + account), never duplicates them. The credential
+    // reaches the vault only here — i.e. only after a successful sync.
+    onDataChange({
+      syncResults: [...data.syncResults.filter((r) => r.source !== result.source), result],
+      credentials: [
+        ...data.credentials.filter(
+          (c) => !(c.source === result.source && c.accountLabel === result.accountLabel),
+        ),
+        { source: result.source, credential, accountLabel: result.accountLabel },
+      ],
+    })
   }
 
   const valued = holdings.filter((h) => h.valueCzk !== undefined)
@@ -42,7 +56,10 @@ export function DashboardPage() {
     <main>
       <div className="grid">
         <NetWorthCard totalCzk={total} asOf={new Date().toLocaleString('cs-CZ')} />
-        <SyncForm onSynced={handleSynced} />
+        <SyncForm
+          onSynced={handleSynced}
+          storedCredential={data.credentials.find((c) => c.source === 'fio')?.credential}
+        />
       </div>
       {unvaluedCount > 0 && (
         <div className="muted" style={{ marginBottom: 12 }}>

@@ -246,6 +246,79 @@ th.num {
   margin-bottom: 8px;
 }
 
+.unlock-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.unlock-card {
+  width: 420px;
+  text-align: center;
+  padding: 40px;
+}
+
+.unlock-card h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+
+.unlock-logo {
+  font-size: 34px;
+}
+
+.unlock-sub {
+  margin-bottom: 24px;
+}
+
+.unlock-card input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.unlock-card button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.unlock-card button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.unlock-notes {
+  list-style: none;
+  padding: 16px 0 0;
+  margin: 0 0 8px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.unlock-notes li {
+  margin-bottom: 8px;
+}
+
 .pill {
   background: var(--border);
   border-radius: 999px;

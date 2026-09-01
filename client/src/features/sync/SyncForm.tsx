@@ -11,16 +11,20 @@ const statusMessages: Record<string, string> = {
 }
 
 type Props = {
-  onSynced: (result: ConnectorSyncResult) => void
+  onSynced: (result: ConnectorSyncResult, credential: string) => void
+  // Prefilled from the vault when this source synced successfully before.
+  storedCredential?: string
 }
 
-export function SyncForm({ onSynced }: Props) {
-  const [token, setToken] = useState('')
+export function SyncForm({ onSynced, storedCredential }: Props) {
+  // useState's argument is only the INITIAL value (used on mount) — later
+  // changes to storedCredential don't overwrite what the user typed.
+  const [token, setToken] = useState(storedCredential ?? '')
 
   const sync = useMutation({
     mutationFn: () => postSync('fio', token),
     onSuccess: (result) => {
-      if (result.status === 'Ok') onSynced(result)
+      if (result.status === 'Ok') onSynced(result, token)
     },
   })
 
