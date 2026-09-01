@@ -23,6 +23,6 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-app.MapSyncEndpoints();
+app.MapGroup("/api").MapSyncEndpoints();
 
 app.Run();

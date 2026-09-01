@@ -10,8 +10,7 @@ export default defineConfig({
     // the client is served from the same origin as the API.
     proxy: {
       '/api': {
-        target: 'http://localhost:5018',
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        target: 'http://localhost:5018'
       },
     },
   },
