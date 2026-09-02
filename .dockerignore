@@ -1,0 +1,6 @@
+# Build output / host-specific folders — never send these into the image build.
+**/node_modules
+**/dist
+**/bin
+**/obj
+.git

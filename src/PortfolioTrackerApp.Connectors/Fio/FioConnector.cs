@@ -37,6 +37,12 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
         {
             return ConnectorSyncResult.Failed(Source, SyncStatus.Unavailable);
         }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient.Timeout elapsed — the bank didn't answer. A cancelled caller
+            // token is not a bank problem, so that case is deliberately let through.
+            return ConnectorSyncResult.Failed(Source, SyncStatus.Unavailable);
+        }
 
         if (!response.IsSuccessStatusCode)
             return ConnectorSyncResult.Failed(Source, MapStatus(response.StatusCode));
