@@ -31,3 +31,24 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [backend, client]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write   # allows the job to request an OIDC token from GitHub
+      contents: read
+    env:
+      IMAGE: acrportfoliotrackerapp.azurecr.io/portfoliotrackerapp:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: az acr login -n acrportfoliotrackerapp
+      - run: docker build -t $IMAGE .
+      - run: docker push $IMAGE
+      - run: az containerapp update -n ca-portfoliotracker -g rg-portfoliotracker --image $IMAGE
