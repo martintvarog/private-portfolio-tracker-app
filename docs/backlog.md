@@ -59,10 +59,33 @@ Design rules in force NOW so this layer stays an add, not a rewrite:
 
 ### F. Far future
 
-- **Automated DCA execution** — place the buy through the broker API from the
-  app. Regulatory + trust minefield: until this, every credential the app asks
-  for stays READ-ONLY; execution would be a separate, explicitly-consented
-  write-scope credential lane.
+- **Automated DCA execution (end-to-end)** — extends the DCA helper (D) from
+  "tell me what to buy" to "do it for me". Target flow, per Martin (2026-09-03):
+  1. user grants API credentials once; 2. app derives the target buy from the
+  goal gap (D); 3. app transfers the cash from the user's bank account to the
+  broker; 4. app places the buy order at the broker; 5. app syncs the portfolio
+  (already MVP) and records the buy as the new "last buy" (C).
+
+  Per-step feasibility as of 2026-09-03:
+  - Steps 1–2, 5: covered by existing plans (goals, DCA helper, transactions,
+    sync). No new lane needed.
+  - Step 3 (bank → broker payment): initiating payments on a user's behalf is a
+    PISP activity under PSD2 — needs own licence or a licensed aggregator.
+    Self-service exception: Fio token API supports payment import when the
+    token has write rights (user-owned account, no third-party licence). ČS
+    Final API Consumer: payment scope to be verified.
+  - Step 4 (broker order): IBKR Flex Query is read-only by design; orders need
+    the Client Portal Web API (gateway session + 2FA, session expiry is the
+    operational pain). Degiro: no API at all — lane impossible, CSV stays
+    read-only. Crypto exchanges: order APIs exist (Kraken, Coinbase) with
+    scoped keys — likely the cheapest first experiment.
+
+  Rules in force NOW: every credential the app asks for stays READ-ONLY;
+  execution gets a separate, explicitly-consented write-scope credential lane
+  (own trust label, own ADR). Design-for: `IConnector` credential lifecycle must
+  be able to express scope (read vs write) so a write lane is an add, not a
+  rewrite. Prerequisites: P&L/transactions layer (C) for last-buy dates, goals
+  (A/D) for the target amount. Regulatory + trust minefield — stays far future.
 - Aggregator connector lane · encrypted multi-device sync · local agent
   ("purist mode") · wealth graph (asset↔liability↔cash-flow links) · rental
   module (rent, indexation, vyúčtování) · AI valuations of illiquid assets.
