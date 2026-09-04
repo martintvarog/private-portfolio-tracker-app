@@ -51,4 +51,4 @@ jobs:
       - run: az acr login -n acrportfoliotrackerapp
       - run: docker build -t $IMAGE .
       - run: docker push $IMAGE
-      - run: az containerapp update -n ca-portfoliotracker -g rg-portfoliotracker --image $IMAGE
+      - run: az deployment group create -g rg-portfoliotracker --template-file infra/main.bicep --parameters image=$IMAGE
