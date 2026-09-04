@@ -6,6 +6,7 @@
     <Project Path="src/PortfolioTrackerApp.MarketData/PortfolioTrackerApp.MarketData.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/PortfolioTrackerApp.Api.Tests/PortfolioTrackerApp.Api.Tests.csproj" />
     <Project Path="tests/PortfolioTrackerApp.Connectors.Tests/PortfolioTrackerApp.Connectors.Tests.csproj" />
     <Project Path="tests/PortfolioTrackerApp.Domain.Tests/PortfolioTrackerApp.Domain.Tests.csproj" />
   </Folder>

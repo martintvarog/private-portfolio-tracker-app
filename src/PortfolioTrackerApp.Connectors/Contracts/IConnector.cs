@@ -13,7 +13,9 @@ namespace PortfolioTrackerApp.Connectors.Contracts;
 /// <item>Source-tagged: every result carries <see cref="SourceId"/> so the client vault
 /// knows which stored positions to replace.</item>
 /// <item>Credentials pass through: never persisted, never logged — including inside
-/// request URLs (Fio puts the token in the URL path).</item>
+/// request URLs (Fio puts the token in the URL path) and inside EXCEPTION MESSAGES:
+/// the framework logs unhandled exceptions verbatim, so a credential in a message
+/// is a credential in the logs.</item>
 /// <item>Unsupported instruments are skipped loudly via <see cref="ConnectorSyncResult.Warnings"/>,
 /// never silently dropped.</item>
 /// </list>
