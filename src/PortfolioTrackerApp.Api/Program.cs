@@ -62,9 +62,20 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
+// Cache policy for the SPA: index.html must be revalidated on every load so a deploy reaches users
+// without a hard refresh; the hashed assets/* it references change name per build and can be cached
+// for a year. Without this, browsers keep a stale index.html → stale bundle after every deploy.
+// The SAME options go to the fallback below — MapFallbackToFile runs its own static-file handler.
+var spaFiles = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+        ctx.Context.Response.Headers.CacheControl = ctx.File.Name == "index.html"
+            ? "no-cache"
+            : "public, max-age=31536000, immutable",
+};
 app.UseDefaultFiles();
-app.UseStaticFiles();
-app.MapFallbackToFile("index.html");
+app.UseStaticFiles(spaFiles);
+app.MapFallbackToFile("index.html", spaFiles);
 
 app.MapGroup("/api").MapSyncEndpoints();
 

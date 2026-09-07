@@ -42,12 +42,24 @@ public class HttpLoggingTests
     }
 
     // Production, like Azure: no developer exception page. (WebApplicationFactory defaults to Development.)
+    // wwwroot is build output (gitignored), so CI has none: give the test host its own web root with a stub index.html.
+    private static readonly string TestWebRoot = CreateTestWebRoot();
+
+    private static string CreateTestWebRoot()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "portfoliotracker-api-tests-wwwroot");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "index.html"), "<!doctype html><title>test</title>");
+        return dir;
+    }
+
     private static (WebApplicationFactory<Program> App, CapturingLoggerProvider Logs) CreateApp(IConnector? connector = null, string environment = "Production")
     {
         var logs = new CapturingLoggerProvider();
         var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment(environment);
+            builder.UseWebRoot(TestWebRoot);
             builder.ConfigureLogging(logging => logging.AddProvider(logs)); // appsettings filters still apply
             builder.ConfigureServices(services =>
             {
@@ -182,5 +194,21 @@ public class HttpLoggingTests
         var error = Assert.Single(lines, l => l.Level == LogLevel.Error);
         Assert.Contains(requestId, error.Message);
         // (ProblemDetails.traceId is the W3C Activity id — a different, also-logged id. Not asserted here.)
+    }
+
+    [Fact]
+    public async Task Index_html_is_never_cached_but_hashed_assets_are_immutable()
+    {
+        var (app, _) = CreateApp();
+        using var client = app.CreateClient();
+
+        // Both ways index.html is served — directly for "/" and via the SPA fallback for a client route.
+        foreach (var path in new[] { "/", "/dashboard" })
+        {
+            var index = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.OK, index.StatusCode);
+            Assert.Equal("no-cache", index.Headers.CacheControl?.ToString());
+        }
+        await app.DisposeAsync();
     }
 }
