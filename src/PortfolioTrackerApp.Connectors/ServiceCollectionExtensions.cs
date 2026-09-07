@@ -12,27 +12,32 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton(TimeProvider.System);
 
-        // Fio: registered as ITSELF (typed HttpClient), then exposed as IConnector through the
-        // logging decorator below. Connectors never see an ILogger.
-        services.AddHttpClient<FioConnector>(client =>
-            {
-                client.BaseAddress = new Uri("https://fioapi.fio.cz/");
-                client.Timeout = TimeSpan.FromSeconds(30);
-            })
-            // Law: credentials are never logged. Fio puts the token in the URL path and the
-            // default HttpClient logger writes request URIs — so no loggers at all here.
-            // Guarded by ConnectorsModuleLoggingTests.
-            .RemoveAllLoggers();
-        services.AddConnector<FioConnector>();
+        services.AddConnector<FioConnector>(client =>
+        {
+            client.BaseAddress = new Uri("https://fioapi.fio.cz/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         return services;
     }
 
-    /// <summary>Exposes a registered connector as <see cref="IConnector"/>, wrapped in <see cref="LoggingConnector"/>.</summary>
-    private static IServiceCollection AddConnector<TConnector>(this IServiceCollection services)
-        where TConnector : class, IConnector =>
-        services.AddTransient<IConnector>(sp => new LoggingConnector(
+    /// <summary>
+    /// The ONLY way to register a connector. One typed HttpClient per connector, configured by the caller;
+    /// the connector is exposed as <see cref="IConnector"/> wrapped in <see cref="LoggingConnector"/>.
+    /// Law, enforced by construction rather than by remembering: the HttpClient has NO loggers —
+    /// connectors put credentials in URLs (Fio: token in the path) and the default HttpClient logger
+    /// writes request URIs. Guarded by ConnectorsModuleLoggingTests for every registered connector.
+    /// </summary>
+    private static IServiceCollection AddConnector<TConnector>(
+        this IServiceCollection services, Action<HttpClient> configureClient)
+        where TConnector : class, IConnector
+    {
+        services.AddHttpClient<TConnector>(configureClient)
+            .RemoveAllLoggers();
+
+        return services.AddTransient<IConnector>(sp => new LoggingConnector(
             sp.GetRequiredService<TConnector>(),
             sp.GetRequiredService<ILogger<LoggingConnector>>(),
             sp.GetRequiredService<TimeProvider>()));
+    }
 }

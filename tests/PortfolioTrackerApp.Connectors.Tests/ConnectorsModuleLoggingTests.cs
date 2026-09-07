@@ -104,18 +104,26 @@ public class ConnectorsModuleLoggingTests
         h is LoggingHttpMessageHandler or LoggingScopeHttpMessageHandler;
 
     [Fact]
-    public async Task Fio_http_client_registration_has_default_logging_removed()
+    public async Task Every_registered_connector_is_wrapped_and_its_http_client_has_no_logging_handler()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddConnectorsModule();
         await using var provider = services.BuildServiceProvider();
 
-        // Typed clients are named after their type. RemoveAllLoggers() must leave NO logging handler in the chain.
-        var chain = HandlerChain(provider, nameof(FioConnector)).ToList();
+        var connectors = provider.GetServices<IConnector>().ToList();
+        Assert.NotEmpty(connectors);
 
-        Assert.NotEmpty(chain);
-        Assert.DoesNotContain(chain, IsFactoryLoggingHandler);
+        foreach (var connector in connectors)
+        {
+            // Every IConnector the endpoint can see must be the decorator...
+            var wrapper = Assert.IsType<LoggingConnector>(connector);
+
+            // ...and the typed HttpClient of whatever it wraps (named after the type) must have NO logging handler.
+            var chain = HandlerChain(provider, wrapper.InnerType.Name).ToList();
+            Assert.NotEmpty(chain);
+            Assert.DoesNotContain(chain, IsFactoryLoggingHandler);
+        }
     }
 
     [Fact]

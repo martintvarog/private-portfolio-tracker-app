@@ -12,6 +12,9 @@ internal sealed class LoggingConnector(IConnector inner, ILogger<LoggingConnecto
 {
     public string SourceId => inner.SourceId;
 
+    /// <summary>The wrapped connector's type — lets tests inspect the HttpClient registered for it.</summary>
+    internal Type InnerType => inner.GetType();
+
     public async Task<ConnectorSyncResult> FetchHoldingsAsync(string credential, CancellationToken cancellationToken)
     {
         var started = timeProvider.GetTimestamp();
