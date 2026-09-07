@@ -23,8 +23,8 @@ is acceptable; the learning is the deliverable.
 - **Client** (`client/`): React+Vite+TS. Encrypted vault (ADR-0009) → dashboard →
   Fio sync → holdings + total → credential saved on success → F5 survives.
   Valuation: CZK cash 1:1 only; rest "—" + honest banner (needs MarketData).
-- **Tests**: 38 green (`dotnet test` at repo root). Domain 18, Connectors 17,
-  Api 3 (new `tests/PortfolioTrackerApp.Api.Tests`, WebApplicationFactory).
+- **Tests**: 42 green (`dotnet test` at repo root). Domain 18, Connectors 17,
+  Api 7 (new `tests/PortfolioTrackerApp.Api.Tests`, WebApplicationFactory).
   Logging tests guard the "never log credentials/IBAN/URLs/bodies" law at three
   layers: decorator unit, real DI + stubbed Fio HTTP, real app in-process.
 - **Dev run**: `dotnet run --project src/PortfolioTrackerApp.Api` (:5018) +
@@ -76,18 +76,23 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
 - Console → Log Analytics tables `ContainerAppConsoleLogs_CL` (app stdout) and
   `ContainerAppSystemLogs_CL` (platform). Live tail:
   `az containerapp logs show -n ca-portfoliotracker -g rg-portfoliotracker --follow`.
-- Emitted per sync: `POST /api/sync 200 <duration>` (HttpLogging) and
+- Emitted per sync, as JSON lines (console formatter `json`, `IncludeScopes`):
+  request line (HttpLogging: Method/Path/StatusCode/Duration) and outcome line
   `Sync {Source} finished with {Status} in {ElapsedMs} ms` (Information for Ok,
-  Warning otherwise). Nothing else. `appsettings.json` has
-  `Microsoft.AspNetCore.HttpLogging: Information` — required or the request log
-  is filtered out by `Microsoft.AspNetCore: Warning`.
+  Warning otherwise). Both carry the `RequestId` scope = `X-Request-Id` response
+  header = "Reference for support" shown in the client on any non-Ok sync.
+  `appsettings.json` needs `Microsoft.AspNetCore.HttpLogging: Information` or the
+  request line is filtered out. Pipeline order: HttpLogging → X-Request-Id
+  (OnStarting) → ExceptionHandler → static files/endpoints.
 - Law: never log credential, request/response bodies, outbound URLs (Fio token is
   in the URL path), AccountLabel (IBAN). `AddHttpClient<FioConnector>` has
   `.RemoveAllLoggers()`; HttpLogging fields are an explicit allow-list. Both are
   test-guarded — mutating either fails CI with a message naming the leak.
-- Open question for the next block: App Insights/OpenTelemetry — its dependency
-  tracking hooks outbound HTTP directly (not via the removed loggers), so it
-  will need URL redaction for the Fio client.
+- Tests: 42 green. Api tests run as `Production` and capture scopes; they assert
+  the header equals the RequestId on both lines, also on the 500 path.
+- Next in this block: KQL on the live app (`docs/observability.md`), revisions +
+  rollback, alerts (Unavailable spike vs one InvalidCredential), then App
+  Insights/OTel — needs outbound-URL redaction for the Fio client.
 
 ## In flight / next
 

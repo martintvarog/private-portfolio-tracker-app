@@ -37,6 +37,22 @@ var app = builder.Build();
 // inside it turns a crash into a 500 before the request log is written — otherwise the request
 // log says 200 for a crash and, in Production, the crash leaves no log line at all.
 app.UseHttpLogging();
+
+// Correlation: ASP.NET's TraceIdentifier is already attached to every log line of a request as the
+// "RequestId" scope (Console IncludeScopes=true, JSON formatter). Hand the same id to the client so a
+// user can quote it — it identifies the request, not the user.
+app.Use(async (context, next) =>
+{
+    // OnStarting (not a direct header write): the exception handler calls Response.Clear() on a
+    // crash, which would drop a header set up front. This callback runs right before headers go out.
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["X-Request-Id"] = context.TraceIdentifier;
+        return Task.CompletedTask;
+    });
+    await next();
+});
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using PortfolioTrackerApp.Connectors.Contracts;
+using PortfolioTrackerApp.Connectors.Logging;
 
 namespace PortfolioTrackerApp.Api.Tests;
 
@@ -50,8 +51,12 @@ public class HttpLoggingTests
             builder.ConfigureLogging(logging => logging.AddProvider(logs)); // appsettings filters still apply
             builder.ConfigureServices(services =>
             {
+                // Swap the bank for a fake, but keep the production shape: IConnector = LoggingConnector(inner).
                 services.RemoveAll<IConnector>();
-                services.AddSingleton(connector ?? new FakeConnector());
+                services.AddTransient<IConnector>(sp => new LoggingConnector(
+                    connector ?? new FakeConnector(),
+                    sp.GetRequiredService<ILogger<LoggingConnector>>(),
+                    sp.GetRequiredService<TimeProvider>()));
             });
         });
         return (app, logs);
@@ -150,5 +155,32 @@ public class HttpLoggingTests
         Assert.DoesNotContain(Credential, await response.Content.ReadAsStringAsync()); // the client still gets nothing
         var error = Assert.Single(lines, l => l.Level == LogLevel.Error);
         Assert.Contains(Credential, error.Message);
+    }
+
+    [Fact]
+    public async Task Response_carries_a_request_id_that_appears_in_both_the_request_and_outcome_log_lines()
+    {
+        var (response, lines) = await PostSync();
+
+        var requestId = Assert.Single(response.Headers.GetValues("X-Request-Id"));
+        Assert.False(string.IsNullOrWhiteSpace(requestId));
+
+        // Same id on the request line (HttpLogging) and on the connector outcome line — the two lines
+        // a support question ("it failed at 14:32, ref 0HN7...") needs to pair up.
+        var request = Assert.Single(lines, l => l.Category.StartsWith("Microsoft.AspNetCore.HttpLogging"));
+        var outcome = Assert.Single(lines, l => l.Category.Contains("LoggingConnector"));
+        Assert.Contains(requestId, request.Message);
+        Assert.Contains(requestId, outcome.Message);
+    }
+
+    [Fact]
+    public async Task Request_id_is_present_even_when_the_connector_crashes()
+    {
+        var (response, lines) = await PostSync(new ThrowingConnector(leakCredentialInMessage: false));
+
+        var requestId = Assert.Single(response.Headers.GetValues("X-Request-Id"));
+        var error = Assert.Single(lines, l => l.Level == LogLevel.Error);
+        Assert.Contains(requestId, error.Message);
+        // (ProblemDetails.traceId is the W3C Activity id — a different, also-logged id. Not asserted here.)
     }
 }

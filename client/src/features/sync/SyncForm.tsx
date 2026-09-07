@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { postSync, type ConnectorSyncResult } from '../../lib/api'
+import { postSync, SyncError, type ConnectorSyncResult } from '../../lib/api'
 
 // Connector outcomes are data, not exceptions (ADR-0005) — each gets a message.
 const statusMessages: Record<string, string> = {
@@ -20,15 +20,28 @@ export function SyncForm({ onSynced, storedCredential }: Props) {
   // useState's argument is only the INITIAL value (used on mount) — later
   // changes to storedCredential don't overwrite what the user typed.
   const [token, setToken] = useState(storedCredential ?? '')
+  // 'copied' is transient UI state: flips true on click, back to false after 1.5 s.
+  const [copied, setCopied] = useState(false)
 
   const sync = useMutation({
     mutationFn: () => postSync('fio', token),
-    onSuccess: (result) => {
+    onSuccess: ({ result }) => {
       if (result.status === 'Ok') onSynced(result, token)
     },
   })
 
-  const outcome = sync.data && sync.data.status !== 'Ok' ? statusMessages[sync.data.status] : null
+  // sync.data is now { result, requestId }; the wire result is one level down.
+  const result = sync.data?.result
+  const outcome = result && result.status !== 'Ok' ? statusMessages[result.status] : null
+  // Shown only when something went wrong: lets the user quote a reference that
+  // points at exactly their request in the server logs — and nothing else.
+  const failureRef = sync.isError
+    ? sync.error instanceof SyncError
+      ? sync.error.requestId
+      : null
+    : outcome
+      ? sync.data?.requestId
+      : null
 
   return (
     <div className="card">
@@ -52,11 +65,28 @@ export function SyncForm({ onSynced, storedCredential }: Props) {
       </form>
       {sync.isError && <div className="sync-error">{sync.error.message}</div>}
       {outcome && <div className="sync-error">{outcome}</div>}
-      {sync.data?.status === 'Ok' && (
+      {failureRef && (
         <div className="muted">
-          Synced {sync.data.holdings.length} holding(s)
-          {sync.data.accountLabel ? ` from ${sync.data.accountLabel}` : ''}.
-          {sync.data.warnings.map((warning) => (
+          Reference for support:{' '}
+          <button
+            type="button"
+            className="ref-copy"
+            title="Copy to clipboard"
+            onClick={async () => {
+              await navigator.clipboard.writeText(failureRef)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 1500)
+            }}
+          >
+            <code>{failureRef}</code> {copied ? '✓ copied' : '⧉'}
+          </button>
+        </div>
+      )}
+      {result?.status === 'Ok' && (
+        <div className="muted">
+          Synced {result.holdings.length} holding(s)
+          {result.accountLabel ? ` from ${result.accountLabel}` : ''}.
+          {result.warnings.map((warning) => (
             <div key={warning}>⚠ {warning}</div>
           ))}
         </div>

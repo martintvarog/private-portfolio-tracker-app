@@ -22,19 +22,36 @@ export type ConnectorSyncResult = {
   warnings: string[]
 }
 
-export async function postSync(source: string, credential: string): Promise<ConnectorSyncResult> {
+// The server's per-request id (X-Request-Id header). It identifies the REQUEST in
+// the server logs, not the user — a user can quote it in a support message and
+// nothing else about them is revealed. Present on every response.
+export type SyncResponse = {
+  result: ConnectorSyncResult
+  requestId: string | null
+}
+
+export class SyncError extends Error {
+  readonly requestId: string | null
+  constructor(message: string, requestId: string | null) {
+    super(message)
+    this.requestId = requestId
+  }
+}
+
+export async function postSync(source: string, credential: string): Promise<SyncResponse> {
   const response = await fetch('/api/sync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ source, credential }),
   })
+  const requestId = response.headers.get('X-Request-Id')
 
   if (!response.ok) {
     // 4xx/5xx here means OUR request/API is broken (ADR-0005); connector
     // outcomes like a dead token arrive as data inside a 200.
     const problem = await response.json().catch(() => null)
-    throw new Error(problem?.title ?? `Sync failed with HTTP ${response.status}`)
+    throw new SyncError(problem?.title ?? `Sync failed with HTTP ${response.status}`, requestId)
   }
 
-  return response.json()
+  return { result: await response.json(), requestId }
 }
