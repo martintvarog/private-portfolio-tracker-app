@@ -14,6 +14,7 @@ Privacy-first, local-first net-worth and portfolio tracker (working title). The 
 ├── client/                               # React + Vite + TS — owns the aggregate: encrypted vault, valuation
 ├── docs/adr/                             # architecture decision records — start here for the "why"
 ├── docs/STATUS.md                        # current state + handoff notes — read second
+├── docs/observability.md                 # logging pipeline + KQL cookbook
 ├── infra/main.bicep                      # all Azure resources; deployed ONLY by the pipeline
 ├── infra/rbac.bicep                      # role assignments; deployed ONLY by a human
 ├── Dockerfile                            # multi-stage: build client → publish API → slim runtime image
@@ -66,7 +67,7 @@ Resource names, region, gotchas, and the fresh-subscription bootstrap sequence a
 
 ## Observability
 
-Console output goes to Log Analytics (`ContainerAppConsoleLogs_CL`). Emitted per request: one HttpLogging line (method, path, status, duration — never bodies or headers) and one connector outcome line (`Sync {Source} finished with {Status} in {ElapsedMs} ms`; `Warning` for non-`Ok`). Unhandled exceptions are logged once at `Error`. The law "never log credentials, IBANs, request/response bodies, or outbound URLs" is enforced by `RemoveAllLoggers()` on the bank `HttpClient`, an explicit HttpLogging field allow-list, and tests in `tests/` that fail CI if either is removed.
+Console output goes to Log Analytics (`ContainerAppConsoleLogs_CL`). Emitted per request: one HttpLogging line (method, path, status, duration — never bodies or headers) and one connector outcome line (`Sync {Source} finished with {Status} in {ElapsedMs} ms`; `Warning` for non-`Ok`). Unhandled exceptions are logged once at `Error`. The law "never log credentials, IBANs, request/response bodies, or outbound URLs" is enforced by `RemoveAllLoggers()` on the bank `HttpClient`, an explicit HttpLogging field allow-list, and tests in `tests/` that fail CI if either is removed. Pipeline diagram and queries: `docs/observability.md` (ADR-0011).
 
 ## Conventions
 
