@@ -23,8 +23,10 @@ is acceptable; the learning is the deliverable.
 - **Client** (`client/`): React+Vite+TS. Encrypted vault (ADR-0009) → dashboard →
   Fio sync → holdings + total → credential saved on success → F5 survives.
   Valuation: CZK cash 1:1 only; rest "—" + honest banner (needs MarketData).
-- **Tests**: 42 green (`dotnet test` at repo root). Domain 18, Connectors 17,
-  Api 7 (new `tests/PortfolioTrackerApp.Api.Tests`, WebApplicationFactory).
+  Non-Ok sync shows "Reference for support" (= X-Request-Id, click-to-copy chip).
+  `index.html` is `no-cache`, `assets/*` immutable → deploys reach users on next load.
+- **Tests**: 43 green (`dotnet test` at repo root). Domain 18, Connectors 17,
+  Api 8 (new `tests/PortfolioTrackerApp.Api.Tests`, WebApplicationFactory).
   Logging tests guard the "never log credentials/IBAN/URLs/bodies" law at three
   layers: decorator unit, real DI + stubbed Fio HTTP, real app in-process.
 - **Dev run**: `dotnet run --project src/PortfolioTrackerApp.Api` (:5018) +
@@ -88,7 +90,7 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
   in the URL path), AccountLabel (IBAN). `AddHttpClient<FioConnector>` has
   `.RemoveAllLoggers()`; HttpLogging fields are an explicit allow-list. Both are
   test-guarded — mutating either fails CI with a message naming the leak.
-- Tests: 42 green. Api tests run as `Production` and capture scopes; they assert
+- Tests: 43 green. Api tests run as `Production`, use their own temp web root, and capture scopes; they assert
   the header equals the RequestId on both lines, also on the 500 path.
 - Next in this block: KQL on the live app (`docs/observability.md`), revisions +
   rollback, alerts (Unavailable spike vs one InvalidCredential), then App
@@ -100,7 +102,7 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
    revisions + rollback (`az containerapp revision list`, `--image <old sha>`),
    scaling rules, alerts (e.g. `Unavailable` spike across users vs one user's
    `InvalidCredential`), cost analysis, then App Insights/OTel with redaction.
-2. Then features per `docs/backlog.md`: manual assets (client-side vault CRUD)
+2. Then features per top-level `../backlog.md` (moved out of the repo in commit `refactor`): manual assets (client-side vault CRUD)
    or FX + non-CZK valuation (ČNB rates, first MarketData feature) → snapshots.
 3. Later: second environment = parameterise names with an env suffix +
    `.bicepparam` files; one deploy identity per environment. Kubernetes far out.
@@ -111,7 +113,7 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
 - `README.md` — architecture overview (check the deploy section is current).
 - `docs/adr/` 0002–0011 (+0001 in top-level `docs/adr/`). No known ADR gaps.
 - `docs/observability.md` — request→log-row pipeline, what each outcome leaves behind, KQL cookbook.
-- `docs/backlog.md` — features by data dependency.
+- top-level `../backlog.md` — features by data dependency (moved out of `repository/docs` in `refactor`).
 - top-level `docs/business-technical-paper.html` — §8 roadmap current
   (2026-08-23); §6.1/§7.2/§7.3 + meta block known-stale.
 - Miro board (architecture + UI v2 mockups): https://miro.com/app/board/uXjVHz8auJM=/

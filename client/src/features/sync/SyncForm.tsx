@@ -66,7 +66,7 @@ export function SyncForm({ onSynced, storedCredential }: Props) {
       {sync.isError && <div className="sync-error">{sync.error.message}</div>}
       {outcome && <div className="sync-error">{outcome}</div>}
       {failureRef && (
-        <div className="muted">
+        <div className="sync-ref">
           Reference for support:{' '}
           <button
             type="button"
