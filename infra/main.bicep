@@ -116,6 +116,46 @@ resource githubFederation 'Microsoft.ManagedIdentity/userAssignedIdentities/fede
 
 // Role assignments live in rbac.bicep — deployed by a human, never by the pipeline.
 
+// ---------- Alert: bank outage (many Unavailable syncs), not one user's dead token ----------
+@description('Fire when more than this many syncs end Unavailable within the 15-minute window. 5 = more than casual retrying by one user; revisit when it fires falsely or stays silent during a real Fio outage.')
+param unavailableAlertThreshold int = 5
+
+// No action group on purpose (Martin, 2026-09-15): visible in Portal → Monitor → Alerts only.
+// Adding email/SMS later = an actionGroups resource + `actions: { actionGroups: [ag.id] }` below.
+resource syncUnavailableAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = {
+  name: 'alert-sync-unavailable'
+  location: location
+  properties: {
+    displayName: 'Sync outcomes: Unavailable spike (bank outage?)'
+    description: 'More than ${unavailableAlertThreshold} syncs ended Unavailable in 15 min. InvalidCredential is excluded on purpose: one expired token is not an incident.'
+    severity: 2 // Warning
+    enabled: true
+    evaluationFrequency: 'PT5M' // run the query every 5 minutes...
+    windowSize: 'PT15M'         // ...over the last 15 minutes
+    scopes: [ logAnalytics.id ]
+    criteria: {
+      allOf: [
+        {
+          query: '''
+ContainerAppConsoleLogs_CL
+| extend j = parse_json(Log_s)
+| where tostring(j.Category) == "PortfolioTrackerApp.Connectors.Logging.LoggingConnector"
+| where tostring(j.State.Status) == "Unavailable"
+'''
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: unavailableAlertThreshold
+          failingPeriods: {
+            numberOfEvaluationPeriods: 1
+            minFailingPeriodsToAlert: 1
+          }
+        }
+      ]
+    }
+    autoMitigate: true // resolves itself once the count is back under the threshold
+  }
+}
+
 // ---------- Outputs: values the outside world needs after a deploy ----------
 output appUrl string = 'https://${app.properties.configuration.ingress.fqdn}'
 output deployClientId string = deployIdentity.properties.clientId
