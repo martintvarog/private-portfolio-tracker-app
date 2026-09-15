@@ -1,0 +1,39 @@
+# Dependabot: opens PRs when dependencies have updates. Nothing merges by itself;
+# CI (backend + client jobs) runs on each PR, so a breaking bump shows up red.
+version: 2
+updates:
+  # .NET packages (all csproj files under the repo root)
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      dotnet: # one PR per week for all NuGet bumps instead of one PR per package
+        patterns: ["*"]
+
+  # npm packages for the client
+  - package-ecosystem: npm
+    directory: /client
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      # majors stay separate: they are the ones that break things and deserve their own PR
+
+  # GitHub Actions used in .github/workflows (actions/checkout, azure/login, ...)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+
+  # Base images in the Dockerfile (node:22-alpine, dotnet/sdk:10.0, dotnet/aspnet:10.0)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
