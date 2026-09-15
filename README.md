@@ -63,7 +63,7 @@ docker run --rm -p 8080:8080 portfoliotrackerapp
 
 Push to `main` → GitHub Actions builds and tests → builds the image → pushes it to Azure Container Registry tagged with the commit SHA → deploys `infra/main.bicep` with that image to Azure Container Apps. No secrets are stored anywhere: the pipeline authenticates with an OIDC federated managed identity, the app pulls images with its own identity (ADR-0007, ADR-0008). Role assignments live in `infra/rbac.bicep` and are deployed by a human only.
 
-Resource names, region, gotchas, and the fresh-subscription bootstrap sequence are in `docs/STATUS.md`.
+Resource names, region, gotchas, and the fresh-subscription bootstrap sequence are in `docs/STATUS.md`. Incident commands (health, revisions, rollback, kill switch) are in `docs/runbook.md`. One log alert (`alert-sync-unavailable`, portal-only) watches for a bank-outage pattern. Dependabot opens weekly PRs for NuGet, npm, Actions, and Docker base images; runtime majors are upgraded by hand.
 
 ## Observability
 

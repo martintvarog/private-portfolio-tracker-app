@@ -1,7 +1,7 @@
 # Project status & handoff
 
 > Snapshot for anyone (human or Claude session) picking this up.
-> Last updated: 2026-09-03. Update this file when a work block completes.
+> Last updated: 2026-09-15. Update this file when a work block completes.
 
 ## Process — read first
 
@@ -92,26 +92,64 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
   test-guarded — mutating either fails CI with a message naming the leak.
 - Tests: 43 green. Api tests run as `Production`, use their own temp web root, and capture scopes; they assert
   the header equals the RequestId on both lines, also on the 500 path.
-- Next in this block: KQL on the live app (`docs/observability.md`), revisions +
-  rollback, alerts (Unavailable spike vs one InvalidCredential), then App
-  Insights/OTel — needs outbound-URL redaction for the Fio client.
+- **Alert** `alert-sync-unavailable` (in `main.bicep`): log alert, every 5 min over
+  15 min, fires when > `unavailableAlertThreshold` (=5) decorator lines have
+  `Status == Unavailable`; `InvalidCredential` excluded on purpose. NO action
+  group (Martin's choice — portal-only: Monitor → Alerts). Never test-fired; to
+  prove it, push threshold 0, sync 6× with a bad token, wait ~10 min, restore 5.
+- **Rollback** (drilled 2026-09-15, see `docs/runbook.md` §5): single-revision
+  mode → `az containerapp update --image …:<good-sha>` creates a new revision
+  with the old image (revisions 0000010/11 are the drill); then `git revert` +
+  push so `main` agrees. `revision list` needs `--all` to show inactive ones.
+- Ops block CLOSED except App Insights/OTel (needs outbound-URL redaction for
+  the Fio client — its dependency tracking bypasses the removed loggers).
 
-## In flight / next
+## Repo hygiene
 
-1. **Operate-the-app block** (Martin's ask): KQL queries over the two tables,
-   revisions + rollback (`az containerapp revision list`, `--image <old sha>`),
-   scaling rules, alerts (e.g. `Unavailable` spike across users vs one user's
-   `InvalidCredential`), cost analysis, then App Insights/OTel with redaction.
-2. Then features per top-level `../backlog.md` (moved out of the repo in commit `refactor`): manual assets (client-side vault CRUD)
-   or FX + non-CZK valuation (ČNB rates, first MarketData feature) → snapshots.
-3. Later: second environment = parameterise names with an env suffix +
-   `.bicepparam` files; one deploy identity per environment. Kubernetes far out.
+- `.github/dependabot.yml` (2026-09-15): weekly Monday PRs for NuGet (grouped),
+  npm (minor+patch grouped, majors separate), GitHub Actions, Docker base images.
+  Runtime MAJORS are ignored by design — .NET 10→11/12 and Node 22→24 are done
+  BY HAND as one coordinated branch (Directory.Build.props + Dockerfile + ci.yml
+  + Microsoft.* packages). Plan: Node 24 ≈ spring 2027; .NET 10 is LTS to Nov 2028,
+  skipping 11 (STS) is fine.
+- No branch ruleset on `main` (Martin's explicit choice while solo). If/when
+  added: block force-push + deletions, require `backend`+`client` checks.
+
+## In flight / next — REACT TRACK (Martin's ask 2026-09-07/15)
+
+Martin wants to deepen React; the client is "the actual application" and he is
+junior there. One backlog feature per React concept, in this order (FE ladder
+from `collaboration-style`: Claude writes the first component → walkthrough →
+Martin predicts/changes one thing → Martin writes the next):
+
+1. **Manual assets** (client-only vault CRUD: flat, car, cash) — forms, controlled
+   inputs, validation, immutable list updates, vault as source of truth. Start
+   Vitest + Testing Library here and add `npm test` to the `client` CI job.
+   Open design question posed to Martin: what fields does a manual asset need
+   (for the holdings table now, for valuation later)?
+2. **Display-currency toggle** — where state lives, lifting vs context, derived values.
+3. **FX + non-CZK valuation** — TanStack Query for real; backend: first MarketData
+   endpoint (ČNB rates) = EF Core + Postgres + BackgroundService. Infra arrives
+   WITH it: Postgres Flexible Server in Bicep, docker-compose returns, Key Vault
+   only when a real secret exists, HTTP health probes.
+4. **Net-worth history chart** (vault snapshots) — effects, memoisation.
+5. Playwright E2E once there are two pages.
+
+Parked: App Insights/OTel + redaction; Fio HttpClient timeout 30 s→15 s (Fio
+stalls unknown tokens, so a bad token takes 30 s to fail — Martin's call);
+alert test-fire; second environment (`envName` param + `.bicepparam`, one deploy
+identity per env); k8s ladder; custom domain.
+
+Learning-goals source of truth: business-technical-paper §7.4 (skill clusters →
+where they live). Done: DevOps. Half: Observability, Testing. Not started:
+Resilience/Polly, EF Core/Postgres, Messaging, Realtime, AuthN/Z, AI.
 
 ## Documentation map
 
 - `CLAUDE.md` (repo root above) — mentor protocol.
 - `README.md` — architecture overview (check the deploy section is current).
 - `docs/adr/` 0002–0011 (+0001 in top-level `docs/adr/`). No known ADR gaps.
+  (0006 amended with the cache policy; 0011 amended with JSON logs + X-Request-Id.)
 - `docs/observability.md` — request→log-row pipeline, what each outcome leaves behind, KQL cookbook.
 - `docs/runbook.md` — incident commands: health, revisions, live logs, ROLLBACK, registry, pipeline identity, drift, cost/kill switch.
 - top-level `../backlog.md` — features by data dependency (moved out of `repository/docs` in `refactor`).
