@@ -113,6 +113,7 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
 - `README.md` — architecture overview (check the deploy section is current).
 - `docs/adr/` 0002–0011 (+0001 in top-level `docs/adr/`). No known ADR gaps.
 - `docs/observability.md` — request→log-row pipeline, what each outcome leaves behind, KQL cookbook.
+- `docs/runbook.md` — incident commands: health, revisions, live logs, ROLLBACK, registry, pipeline identity, drift, cost/kill switch.
 - top-level `../backlog.md` — features by data dependency (moved out of `repository/docs` in `refactor`).
 - top-level `docs/business-technical-paper.html` — §8 roadmap current
   (2026-08-23); §6.1/§7.2/§7.3 + meta block known-stale.
