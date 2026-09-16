@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Sidebar } from './app/Sidebar'
+import { BrowserRouter, Route, Routes } from 'react-router'
+import { AppLayout } from './app/AppLayout'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { UnlockPage } from './features/vault/UnlockPage'
 import { persistVault, vaultExists, type UnlockedVault, type VaultData } from './lib/vault'
@@ -28,12 +29,23 @@ function App() {
   }
 
   // Three-way render — 'unlocked' is not a mode: it's derived from vault !== null.
+  // The router lives INSIDE this branch: no page can match a URL while locked.
   if (vault !== null) {
     return (
-      <>
-        <Sidebar />
-        <DashboardPage data={vault.data} onDataChange={updateVaultData} />
-      </>
+      <BrowserRouter>
+        <Routes>
+          {/* Layout route: no path → renders the shared frame whenever a child matches.
+              No matching child (e.g. /unknown) → nothing renders, layout included. */}
+          <Route element={<AppLayout />}>
+            <Route
+              path="/"
+              element={<DashboardPage data={vault.data} onDataChange={updateVaultData} />}
+            />
+            {/* Catch-all: any URL no sibling matched still gets the frame, not a blank page. */}
+            <Route path="*" element={<div className="muted">Page not found.</div>} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     )
   }
 

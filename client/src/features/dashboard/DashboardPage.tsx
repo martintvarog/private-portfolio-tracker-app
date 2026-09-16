@@ -53,7 +53,7 @@ export function DashboardPage({ data, onDataChange }: Props) {
   const unvaluedCount = holdings.length - valued.length
 
   return (
-    <main>
+    <div>
       <div className="grid">
         <NetWorthCard totalCzk={total} asOf={new Date().toLocaleString('cs-CZ')} />
         <SyncForm
@@ -68,6 +68,6 @@ export function DashboardPage({ data, onDataChange }: Props) {
         </div>
       )}
       <HoldingsTable holdings={holdings} />
-    </main>
+    </div>
   )
 }

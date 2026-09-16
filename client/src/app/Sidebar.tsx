@@ -1,13 +1,16 @@
-type NavItem = { label: string; active?: boolean; soon?: boolean }
+import { NavLink } from 'react-router'
+
+// A nav item is either a real page (has a path) or a placeholder marked `soon`.
+type NavItem = { label: string; to?: string; soon?: boolean }
 type NavSection = { title: string; items: NavItem[] }
 
 const sections: NavSection[] = [
-  { title: 'Overview', items: [{ label: 'Dashboard', active: true }] },
+  { title: 'Overview', items: [{ label: 'Dashboard', to: '/' }] },
   {
     title: 'Wealth',
     items: [
-      { label: 'Holdings' },
-      { label: 'Manual assets' },
+      { label: 'Holdings', to: '/holdings' },
+      { label: 'Manual assets', soon: true },
       { label: 'Wealth graph', soon: true },
     ],
   },
@@ -20,7 +23,10 @@ const sections: NavSection[] = [
   },
   {
     title: 'Setup',
-    items: [{ label: 'Connections' }, { label: 'Settings', soon: true }],
+    items: [
+      { label: 'Connections', to: '/connections' },
+      { label: 'Settings', soon: true },
+    ],
   },
 ]
 
@@ -31,16 +37,26 @@ export function Sidebar() {
       {sections.map((section) => (
         <div key={section.title}>
           <div className="section">{section.title}</div>
-          {section.items.map((item) => (
-            <button
-              key={item.label}
-              className={`item${item.active ? ' active' : ''}${item.soon ? ' soon' : ''}`}
-              disabled={item.soon}
-            >
-              {item.label}
-              {item.soon && <span className="tag">soon</span>}
-            </button>
-          ))}
+          {section.items.map((item) =>
+            item.to ? (
+              // NavLink = Link that knows if its path matches the URL. The class
+              // callback receives isActive, so the URL decides the highlight.
+              // `end` on "/" stops it matching every path (all start with "/").
+              <NavLink
+                key={item.label}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) => `item${isActive ? ' active' : ''}`}
+              >
+                {item.label}
+              </NavLink>
+            ) : (
+              <button key={item.label} className="item soon" disabled>
+                {item.label}
+                <span className="tag">soon</span>
+              </button>
+            ),
+          )}
         </div>
       ))}
       <div className="foot">🔓 Vault unlocked</div>
