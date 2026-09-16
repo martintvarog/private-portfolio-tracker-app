@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppLayout } from './app/AppLayout'
+import { ConnectionsPage } from './features/connections/ConnectionsPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { UnlockPage } from './features/vault/UnlockPage'
 import { persistVault, vaultExists, type UnlockedVault, type VaultData } from './lib/vault'
@@ -40,6 +41,10 @@ function App() {
             <Route
               path="/"
               element={<DashboardPage data={vault.data} onDataChange={updateVaultData} />}
+            />
+            <Route
+              path="/connections"
+              element={<ConnectionsPage data={vault.data} onDataChange={updateVaultData} />}
             />
             {/* Catch-all: any URL no sibling matched still gets the frame, not a blank page. */}
             <Route path="*" element={<div className="muted">Page not found.</div>} />

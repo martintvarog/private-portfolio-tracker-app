@@ -7,7 +7,11 @@
   --accent: #2a78d6;
   --accent-bg: rgba(42, 120, 214, 0.1);
 
-  font: 15px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  font:
+    15px/1.5 system-ui,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -351,4 +355,96 @@ th.num {
 }
 .ref-copy:hover {
   text-decoration: underline;
+}
+
+/* --- connections page --- */
+main h1 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.card-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.card-head .chip {
+  margin-left: auto;
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.chip-ok {
+  background: rgba(12, 163, 12, 0.12);
+  color: #006300;
+}
+
+.chip-warn {
+  background: rgba(250, 178, 25, 0.16);
+  color: #7a5200;
+}
+
+.chip-err {
+  background: rgba(208, 59, 59, 0.1);
+  color: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .chip-ok {
+    color: #0ca30c;
+  }
+  .chip-warn {
+    color: #fab219;
+  }
+  .chip-err {
+    color: #e66767;
+  }
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
+.facts dt {
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-secondary {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }

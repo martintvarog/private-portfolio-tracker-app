@@ -1,6 +1,5 @@
 import { HoldingsTable } from '../holdings/HoldingsTable'
 import type { Holding } from '../holdings/types'
-import { SyncForm } from '../sync/SyncForm'
 import type { ConnectorSyncResult } from '../../lib/api'
 import type { VaultData } from '../../lib/vault'
 import { NetWorthCard } from './NetWorthCard'
@@ -28,25 +27,12 @@ function toHoldings(result: ConnectorSyncResult): Holding[] {
   }))
 }
 
-export function DashboardPage({ data, onDataChange }: Props) {
+// onDataChange is not used yet — syncing moved to the Connections page. The prop
+// stays because upcoming dashboard cards (snapshots, display currency) will write.
+export function DashboardPage({ data }: Props) {
   // No holdings state here anymore: the vault's raw syncResults are the facts,
   // everything below is derived fresh on every render.
   const holdings = data.syncResults.flatMap(toHoldings)
-
-  const handleSynced = (result: ConnectorSyncResult, credential: string) => {
-    // Re-syncing a source replaces its results and its stored credential
-    // (matched by source + account), never duplicates them. The credential
-    // reaches the vault only here — i.e. only after a successful sync.
-    onDataChange({
-      syncResults: [...data.syncResults.filter((r) => r.source !== result.source), result],
-      credentials: [
-        ...data.credentials.filter(
-          (c) => !(c.source === result.source && c.accountLabel === result.accountLabel),
-        ),
-        { source: result.source, credential, accountLabel: result.accountLabel },
-      ],
-    })
-  }
 
   const valued = holdings.filter((h) => h.valueCzk !== undefined)
   const total = valued.reduce((sum, h) => sum + (h.valueCzk ?? 0), 0)
@@ -56,10 +42,6 @@ export function DashboardPage({ data, onDataChange }: Props) {
     <div>
       <div className="grid">
         <NetWorthCard totalCzk={total} asOf={new Date().toLocaleString('cs-CZ')} />
-        <SyncForm
-          onSynced={handleSynced}
-          storedCredential={data.credentials.find((c) => c.source === 'fio')?.credential}
-        />
       </div>
       {unvaluedCount > 0 && (
         <div className="muted" style={{ marginBottom: 12 }}>
