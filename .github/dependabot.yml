@@ -17,6 +17,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Extensions.*"
         update-types: ["version-update:semver-major"]
+      # Microsoft.AspNetCore.OpenApi 10.x requires Microsoft.OpenApi < 3.0.0 (NU1608 otherwise).
+      - dependency-name: "Microsoft.OpenApi"
+        update-types: ["version-update:semver-major"]
 
   # npm packages for the client
   - package-ecosystem: npm
