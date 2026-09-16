@@ -36,6 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, client]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only one deploy at a time; later pushes queue rather than racing this one.
+    # Never cancel: a half-applied Bicep deployment is worse than a short wait.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     permissions:
       id-token: write   # allows the job to request an OIDC token from GitHub
       contents: read
@@ -51,4 +56,6 @@ jobs:
       - run: az acr login -n acrportfoliotrackerapp
       - run: docker build -t $IMAGE .
       - run: docker push $IMAGE
-      - run: az deployment group create -g rg-portfoliotracker --template-file infra/main.bicep --parameters image=$IMAGE
+      # Unique name per run: ARM refuses to overwrite a deployment that is still active,
+      # and run_id stays unique even when the same commit is re-run.
+      - run: az deployment group create -g rg-portfoliotracker --name deploy-${{ github.run_id }} --template-file infra/main.bicep --parameters image=$IMAGE
