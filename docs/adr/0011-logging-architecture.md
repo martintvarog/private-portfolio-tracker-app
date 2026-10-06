@@ -9,15 +9,20 @@ Once deployed (ADR-0007) the app emitted nothing on the one path a user would as
 
 ## Decision
 
-- **Two emitters, both cross-cutting, no `ILogger` in connectors or endpoints.**
-  - `LoggingConnector`, a decorator around every `IConnector` (wired in `AddConnectorsModule` via `AddConnector<T>()`): one structured line per sync, `Sync {Source} finished with {Status} in {ElapsedMs} ms` — `Information` for `Ok`, `Warning` for any other status. Those three placeholders and nothing else.
-  - `UseHttpLogging` with an explicit allow-list — `RequestMethod | RequestPath | ResponseStatusCode | Duration`, `CombineLogs = true`. Never bodies, never headers. Requires `Microsoft.AspNetCore.HttpLogging: Information` in `appsettings.json` because `Microsoft.AspNetCore` is at `Warning`.
-- **Pipeline order:** `UseHttpLogging` outermost, `UseExceptionHandler` (+ `AddProblemDetails`) inside it, then static files and endpoints. The handler turns a crash into an RFC 7807 500 with no internals and the framework logs the exception once at `Error`; because HttpLogging wraps it, the request line records the real status.
-- **The bank `HttpClient` has no loggers** (`RemoveAllLoggers()`); the `IConnector` law extends to exception messages, since the framework logs unhandled exceptions verbatim.
-- **JSON console formatter with scopes** (`Logging:Console:FormatterName=json`, `IncludeScopes=true`): one JSON object per line, placeholders preserved as `State` fields, hosting's `RequestId`/`RequestPath` and the W3C `TraceId`/`SpanId` as `Scopes`. Queryable with `parse_json` in KQL; no multi-line entries.
-- **Correlation id on the wire:** every response carries `X-Request-Id` = `HttpContext.TraceIdentifier` (set via `Response.OnStarting` so the exception handler's `Response.Clear()` cannot drop it). The client shows it as a support reference whenever a sync is not `Ok`. It identifies the request, never the user.
-- **Transport is stdout → Container Apps → Log Analytics** (`ContainerAppConsoleLogs_CL`, plus `ContainerAppSystemLogs_CL` for platform events), 30-day retention. No second provider yet.
-- **Test-guarded at three layers** (decorator unit; real DI with stubbed Fio HTTP capturing every category; the real app in-process in `Production`): the request and outcome lines exist with the expected content and level; no line in any category contains the credential, IBAN, balance, outbound URL, or body markers; the HttpClient handler chain has no logging handler. Two control tests build the leaky configuration on purpose and assert the leak happens, proving the guards are sensitive.
+- **Chosen:** Two cross-cutting emitters, no `ILogger` in connectors or endpoints — `LoggingConnector`, a decorator around every `IConnector`, logs one structured line per sync (`Sync {Source} finished with {Status} in {ElapsedMs} ms`, `Information` for `Ok`/`Warning` otherwise, those three placeholders and nothing else); `UseHttpLogging` logs request lines from an explicit allow-list (`RequestMethod | RequestPath | ResponseStatusCode | Duration`), never bodies or headers.
+  **Why:** the Fio token travels in the outbound URL, the sync request body carries the credential, and the response body carries IBAN and balances — any general-purpose logger (HttpClient factory loggers, `HttpLoggingFields.All`, App Insights dependency tracking) would record exactly what must never be recorded. An allow-list and a decorator that only ever sees status/elapsed time can't leak what they never touch.
+- **Chosen — pipeline order:** `UseHttpLogging` outermost, `UseExceptionHandler` (+ `AddProblemDetails`) inside it, then static files and endpoints.
+  **Why:** this turns a crash into a clean RFC 7807 500 with no internals, while the outer HttpLogging still records the real status code for that request — with no exception handler at all, a crash left no log line and the request log recorded `200`.
+- **Chosen:** The bank `HttpClient` has no loggers (`RemoveAllLoggers()`); the `IConnector` law extends to exception messages.
+  **Why:** the framework logs unhandled exceptions verbatim, so a careless exception message would quietly reopen the leak everything else is built to prevent.
+- **Chosen:** JSON console formatter with scopes — one JSON object per line, placeholders as `State` fields, `RequestId`/`RequestPath`/`TraceId`/`SpanId` as `Scopes`.
+  **Why:** queryable with `parse_json` in KQL, and keeps correlation data structured instead of buried in free text.
+- **Chosen:** Correlation id on the wire — every response carries `X-Request-Id` = `HttpContext.TraceIdentifier`, set via `Response.OnStarting`; the client shows it as a support reference whenever a sync isn't `Ok`.
+  **Why:** it identifies the request, never the user, and setting it via `OnStarting` survives the exception handler's `Response.Clear()`.
+- **Chosen:** Transport is stdout → Container Apps → Log Analytics, 30-day retention, no second provider yet.
+  **Why:** matches the hosting platform already chosen in ADR-0007 — nothing extra to run.
+- **Chosen:** Test-guarded at three layers (decorator unit; real DI with stubbed Fio HTTP; the real app in-process in `Production`), plus two control tests that build a leaky configuration on purpose and assert the leak happens.
+  **Why:** a guard that's never seen a real leak isn't proven to catch one — the control tests show the other tests would actually fail if the leak discipline regressed.
 
 ## Consequences
 
