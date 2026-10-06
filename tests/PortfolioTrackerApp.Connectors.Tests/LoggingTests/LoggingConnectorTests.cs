@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
+
 using PortfolioTrackerApp.Connectors.Contracts;
 using PortfolioTrackerApp.Connectors.Logging;
 
-namespace PortfolioTrackerApp.Connectors.Tests;
+namespace PortfolioTrackerApp.Connectors.Tests.LoggingTests;
 
 public class LoggingConnectorTests
 {

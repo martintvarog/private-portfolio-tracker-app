@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
+
 using Microsoft.Extensions.Logging;
 
-namespace PortfolioTrackerApp.Api.Tests;
+namespace PortfolioTrackerApp.Api.Tests.LoggingTests;
 
 /// <summary>
 /// Records every log line from every category, with its scopes, so tests can assert what was — and wasn't — logged.

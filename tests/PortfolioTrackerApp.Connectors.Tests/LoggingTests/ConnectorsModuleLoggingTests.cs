@@ -1,12 +1,14 @@
 using System.Net;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Logging;
 using Microsoft.Extensions.Logging;
+
 using PortfolioTrackerApp.Connectors.Contracts;
 using PortfolioTrackerApp.Connectors.Fio;
 using PortfolioTrackerApp.Connectors.Logging;
 
-namespace PortfolioTrackerApp.Connectors.Tests;
+namespace PortfolioTrackerApp.Connectors.Tests.LoggingTests;
 
 /// <summary>
 /// Goes through the real DI wiring (AddConnectorsModule) with a stubbed Fio HTTP response and

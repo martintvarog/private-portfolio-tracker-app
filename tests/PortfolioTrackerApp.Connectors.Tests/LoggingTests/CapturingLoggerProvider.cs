@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
+
 using Microsoft.Extensions.Logging;
 
-namespace PortfolioTrackerApp.Connectors.Tests;
+namespace PortfolioTrackerApp.Connectors.Tests.LoggingTests;
 
 /// <summary>Records every log line from every category so tests can assert what was — and wasn't — logged.</summary>
 public sealed class CapturingLoggerProvider : ILoggerProvider
