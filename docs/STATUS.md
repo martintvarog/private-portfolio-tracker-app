@@ -1,7 +1,7 @@
 # Project status & handoff
 
 > Snapshot for anyone (human or Claude session) picking this up.
-> Last updated: 2026-09-15. Update this file when a work block completes.
+> Last updated: 2026-10-06. Update this file when a work block completes.
 
 ## Process — read first
 
@@ -20,15 +20,32 @@ is acceptable; the learning is the deliverable.
   call, outcomes as data — ADR-0005), `GET /health`. FioConnector done. Enums as
   strings (ADR-0010). Connector outcome logging via `LoggingConnector` decorator;
   inbound request logging via `UseHttpLogging` (method/path/status/duration only).
-- **Client** (`client/`): React+Vite+TS. Encrypted vault (ADR-0009) → dashboard →
-  Fio sync → holdings + total → credential saved on success → F5 survives.
+- **Client** (`client/`): React+Vite+TS. Encrypted vault (ADR-0009) → unlock →
+  routed app shell. `react-router` added (2026-09-16): `AppLayout` (`Sidebar` +
+  `<Outlet/>`) wraps two live routes — `/` = `DashboardPage` (net worth + holdings
+  table, read-only, derived from vault data every render) and `/connections` =
+  `ConnectionsPage` (one `ConnectionCard` per stored credential — status chip,
+  last sync, Remove-with-confirm that also drops that source's holdings —
+  Martin's choice 2026-09-16 — plus `SyncForm`). Sync now goes through
+  TanStack Query (`useMutation` in `SyncForm`) — originally planned for the FX
+  step (#3 below), introduced early while extracting the Connections page.
+  Credential saved on success, holdings/credentials live in vault, F5 survives.
   Valuation: CZK cash 1:1 only; rest "—" + honest banner (needs MarketData).
   Non-Ok sync shows "Reference for support" (= X-Request-Id, click-to-copy chip).
   `index.html` is `no-cache`, `assets/*` immutable → deploys reach users on next load.
-- **Tests**: 43 green (`dotnet test` at repo root). Domain 18, Connectors 17,
-  Api 8 (new `tests/PortfolioTrackerApp.Api.Tests`, WebApplicationFactory).
-  Logging tests guard the "never log credentials/IBAN/URLs/bodies" law at three
-  layers: decorator unit, real DI + stubbed Fio HTTP, real app in-process.
+  **Known gap**: `Sidebar` has a live `Holdings` nav item linking to `/holdings`,
+  but no such route exists in `App.tsx` — it currently hits the catch-all
+  ("Page not found"). Holdings today render only on `/` (Dashboard). Needs a
+  decision: register `/holdings`, or point the nav item at `/`.
+- **Tests**: 43 green (`dotnet test` at repo root) as of 2026-09-15; no
+  `src/`/`tests/` changes since (only dependency bumps — merged dependabot PRs,
+  CI stayed green), so the count still holds. Domain 18, Connectors 17, Api 8
+  (`tests/PortfolioTrackerApp.Api.Tests`, WebApplicationFactory). Logging tests
+  guard the "never log credentials/IBAN/URLs/bodies" law at three layers:
+  decorator unit, real DI + stubbed Fio HTTP, real app in-process.
+  **Client still has zero automated tests** — Vitest + Testing Library (planned
+  alongside the Manual assets feature, see React track #1) hasn't been set up;
+  no `npm test` script, no `client` CI test step yet.
 - **Dev run**: `dotnet run --project src/PortfolioTrackerApp.Api` (:5018) +
   `cd client && npm run dev` (:5173, proxies `/api`). Production-style local run:
   `npm run build`, copy `client/dist/*` → `src/PortfolioTrackerApp.Api/wwwroot/`
@@ -42,6 +59,12 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
   `deploy` (needs both, push-to-main only): `azure/login` via OIDC → `docker build`
   → push `:<git sha>` to ACR → `az deployment group create infra/main.bicep
   --parameters image=$IMAGE`. ~5 min.
+- **Concurrent deploys handled** (2026-09-16, `60c8eb0`): `deploy` job now has
+  `concurrency: {group: deploy-production, cancel-in-progress: false}` so a
+  second push queues behind a running deploy instead of racing it (a cancelled
+  mid-flight Bicep deployment would be worse than a short wait); deployment name
+  is `deploy-${{ github.run_id }}` (unique per run — ARM refuses to overwrite a
+  still-active deployment of the same name).
 - **Azure** (all in `rg-portfoliotracker`, region `germanywestcentral`; West
   Europe refused new subscriptions): ACR `acrportfoliotrackerapp` (Basic), Log
   Analytics `workspace-rgportfoliotrackerk171`, environment `cae-portfoliotracker`
@@ -112,6 +135,10 @@ Public URL: https://ca-portfoliotracker.graymoss-a8833994.germanywestcentral.azu
   BY HAND as one coordinated branch (Directory.Build.props + Dockerfile + ci.yml
   + Microsoft.* packages). Plan: Node 24 ≈ spring 2027; .NET 10 is LTS to Nov 2028,
   skipping 11 (STS) is fine.
+  First grouped round merged clean 2026-09-16: `actions/checkout`→7,
+  `actions/setup-dotnet`→6, `actions/setup-node`→7, `azure/login`→3,
+  `typescript`→7.0.2, the npm minor/patch group (8 updates), the dotnet group
+  (7 updates) — pipeline + grouping confirmed working end to end.
 - No branch ruleset on `main` (Martin's explicit choice while solo). If/when
   added: block force-push + deletions, require `backend`+`client` checks.
 
@@ -127,6 +154,11 @@ Martin predicts/changes one thing → Martin writes the next):
    Vitest + Testing Library here and add `npm test` to the `client` CI job.
    Open design question posed to Martin: what fields does a manual asset need
    (for the holdings table now, for valuation later)?
+   **Not started yet** — `VaultData` still only has `syncResults` + `credentials`,
+   no manual-asset field. What DID land first (2026-09-16, ahead of this step):
+   `react-router`, the `AppLayout`/`Sidebar` nav shell, and splitting sync/credential
+   management out into its own `/connections` page — scaffolding this step will
+   build on, but not the CRUD itself. Sidebar still marks "Manual assets" `soon`.
 2. **Display-currency toggle** — where state lives, lifting vs context, derived values.
 3. **FX + non-CZK valuation** — TanStack Query for real; backend: first MarketData
    endpoint (ČNB rates) = EF Core + Postgres + BackgroundService. Infra arrives
@@ -148,7 +180,11 @@ Resilience/Polly, EF Core/Postgres, Messaging, Realtime, AuthN/Z, AI.
 
 - `CLAUDE.md` (repo root above) — mentor protocol.
 - `README.md` — architecture overview (check the deploy section is current).
-- `docs/adr/` 0002–0011 (+0001 in top-level `docs/adr/`). No known ADR gaps.
+- `docs/adr/` 0000–0011, all now living here (ADR-0001 copied in from the
+  top-level `docs/adr/` on 2026-10-06, closing the old split). No known ADR
+  gaps. Same day (`cb49e35`): every ADR + the template reformatted to the
+  root `CLAUDE.md` decision-bullet structure (`**Chosen:**` / `**Why:**`,
+  risks flagged `**Risk:**`) — content unchanged, just restructured.
   (0006 amended with the cache policy; 0011 amended with JSON logs + X-Request-Id.)
 - `docs/observability.md` — request→log-row pipeline, what each outcome leaves behind, KQL cookbook.
 - `docs/runbook.md` — incident commands: health, revisions, live logs, ROLLBACK, registry, pipeline identity, drift, cost/kill switch.
