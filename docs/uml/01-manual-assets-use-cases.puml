@@ -1,0 +1,25 @@
+@startuml
+' Step 1 creating exercise 1 — dictated by Martin, written by Claude
+left to right direction
+!pragma layout smetana
+
+actor User
+
+rectangle "Portfolio Tracker — Manual assets" {
+  usecase "Add asset" as Add
+  usecase "View assets" as View
+  usecase "Revalue asset" as Revalue
+  usecase "Mark asset as disposed" as Dispose
+  usecase "Save + snapshot" as Save
+}
+
+User -- Add
+User -- View
+User -- Revalue
+User -- Dispose
+
+Add ..> Save : <<include>>
+Revalue ..> Save : <<include>>
+Dispose ..> Save : <<include>>
+
+@enduml

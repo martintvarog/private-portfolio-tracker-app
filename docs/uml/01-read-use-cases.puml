@@ -1,0 +1,29 @@
+@startuml
+' Step 1 reading exercise — written by Claude, interpreted by Martin
+left to right direction
+!pragma layout smetana
+
+actor User
+actor "Fio Bank" as Fio
+
+rectangle "Portfolio Tracker" {
+  usecase "Create vault" as UC1
+  usecase "Unlock vault" as UC2
+  usecase "View dashboard" as UC3
+  usecase "Add connection" as UC4
+  usecase "Sync holdings" as UC5
+  usecase "Copy support reference" as UC6
+  usecase "Remove connection" as UC7
+}
+
+User -- UC1
+User -- UC2
+User -- UC3
+User -- UC4
+User -- UC7
+
+UC4 ..> UC5 : <<include>>
+UC6 ..> UC5 : <<extend>>
+UC5 -- Fio
+
+@enduml
