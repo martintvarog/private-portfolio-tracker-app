@@ -35,7 +35,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [backend, client]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # PAUSED: remove "false && " to re-enable deploys.
+    if: false && github.event_name == 'push' && github.ref == 'refs/heads/main'
     # Only one deploy at a time; later pushes queue rather than racing this one.
     # Never cancel: a half-applied Bicep deployment is worse than a short wait.
     concurrency:
