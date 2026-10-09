@@ -1,0 +1,47 @@
+@startuml
+' Step 2 creating exercise 1 — dictated by Martin, written by Claude
+' Source: src/PortfolioTrackerApp.Connectors
+!pragma layout smetana
+hide empty members
+
+interface IConnector {
+  + SourceId : string
+  + FetchHoldingsAsync(credential : string, cancellationToken : CancellationToken) : Task<ConnectorSyncResult>
+}
+
+class FioConnector
+class LoggingConnector <<decorator>>
+
+class ConnectorSyncResult {
+  + Source : string
+  + AccountLabel : string [0..1]
+  + AsOf : DateTimeOffset [0..1]
+  + Warnings : string [0..*]
+}
+
+class SyncedHolding
+
+enum SyncStatus {
+  Ok
+  InvalidCredential
+  Unavailable
+  RateLimited
+}
+
+' realization: both implement the interface
+FioConnector ..|> IConnector
+LoggingConnector ..|> IConnector
+
+' association: the decorator holds the connector it wraps
+LoggingConnector "1" --> "1" IConnector : inner
+
+' dependency: return type only, not stored
+IConnector ..> ConnectorSyncResult : <<use>>
+
+' composition: holdings belong to one result and die with it
+ConnectorSyncResult "1" *-- "0..*" SyncedHolding : holdings
+
+' association: references one shared enum value
+ConnectorSyncResult "*" --> "1" SyncStatus : status
+
+@enduml
