@@ -1,6 +1,6 @@
 @startuml
 ' Step 2 reading exercise — written by Claude, interpreted by Martin
-' Source: src/PortfolioTrackerApp.Domain (Monetary, Assets, Holdings)
+' Source: src/PortfolioTrackerApp.Domain (Monetary, Assets, Positions)
 !pragma layout smetana
 hide empty members
 
@@ -40,7 +40,7 @@ package Assets {
   }
 }
 
-package Holdings {
+package Positions {
   class Position <<value object>> {
     + Quantity : decimal
     + Source : string

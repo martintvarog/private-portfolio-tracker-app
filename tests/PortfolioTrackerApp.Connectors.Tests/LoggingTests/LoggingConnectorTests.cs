@@ -14,7 +14,7 @@ public class LoggingConnectorTests
     {
         public string SourceId => "fake";
         public string? SeenCredential { get; private set; }
-        public Task<ConnectorSyncResult> FetchHoldingsAsync(string credential, CancellationToken cancellationToken)
+        public Task<ConnectorSyncResult> FetchPositionsAsync(string credential, CancellationToken cancellationToken)
         {
             SeenCredential = credential;
             return Task.FromResult(result);
@@ -26,7 +26,7 @@ public class LoggingConnectorTests
         Source = "fake",
         Status = SyncStatus.Ok,
         AccountLabel = Iban,
-        Holdings = [new SyncedHolding { Kind = "cash", Symbol = "CZK", Quantity = 195.01m, Currency = "CZK" }],
+        Positions = [new SyncedPosition { AssetType = "cash", Symbol = "CZK", Quantity = 195.01m, Currency = "CZK" }],
     };
 
     private static async Task<(ConnectorSyncResult Result, CapturingLoggerProvider Logs)> Run(ConnectorSyncResult inner)
@@ -36,7 +36,7 @@ public class LoggingConnectorTests
         var fake = new FakeConnector(inner);
         var sut = new LoggingConnector(fake, factory.CreateLogger<LoggingConnector>(), TimeProvider.System);
 
-        var result = await sut.FetchHoldingsAsync(Credential, CancellationToken.None);
+        var result = await sut.FetchPositionsAsync(Credential, CancellationToken.None);
 
         Assert.Equal(Credential, fake.SeenCredential); // decorator passes the credential through untouched
         Assert.Same(inner, result);                     // and returns the inner result as-is
@@ -69,7 +69,7 @@ public class LoggingConnectorTests
     }
 
     [Fact]
-    public async Task Log_line_never_contains_credential_account_label_or_holdings()
+    public async Task Log_line_never_contains_credential_account_label_or_positions()
     {
         var (_, logs) = await Run(OkResult());
 
@@ -77,6 +77,6 @@ public class LoggingConnectorTests
         Assert.DoesNotContain(Credential, line.Message);
         Assert.DoesNotContain(Iban, line.Message);
         Assert.DoesNotContain("195", line.Message);   // balance
-        Assert.DoesNotContain("CZK", line.Message);   // holding detail
+        Assert.DoesNotContain("CZK", line.Message);   // position detail
     }
 }

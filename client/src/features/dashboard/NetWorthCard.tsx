@@ -1,22 +1,22 @@
 const czk = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 0 })
 
 type Props = {
-  totalCzk: number
+  netWorth: number
   asOf: string
-  deltaCzk?: number
+  netWorthDelta?: number
 }
 
-export function NetWorthCard({ totalCzk, asOf, deltaCzk }: Props) {
+export function NetWorthCard({ netWorth, asOf, netWorthDelta }: Props) {
   return (
     <div className="card">
       <h2>Total net worth</h2>
       <div className="networth-value">
-        {czk.format(totalCzk)} <span className="networth-currency">CZK</span>
+        {czk.format(netWorth)} <span className="networth-currency">CZK</span>
       </div>
-      {deltaCzk !== undefined && (
-        <div className={deltaCzk >= 0 ? 'delta-up' : 'delta-down'}>
-          {deltaCzk >= 0 ? '▲ +' : '▼ '}
-          {czk.format(deltaCzk)} CZK since last snapshot
+      {netWorthDelta !== undefined && (
+        <div className={netWorthDelta >= 0 ? 'delta-up' : 'delta-down'}>
+          {netWorthDelta >= 0 ? '▲ +' : '▼ '}
+          {czk.format(netWorthDelta)} CZK since last snapshot
         </div>
       )}
       <div className="muted">Computed on this device · {asOf}</div>

@@ -25,13 +25,13 @@ public class HttpLoggingTests
     private sealed class FakeConnector : IConnector
     {
         public string SourceId => "fio";
-        public Task<ConnectorSyncResult> FetchHoldingsAsync(string credential, CancellationToken cancellationToken) =>
+        public Task<ConnectorSyncResult> FetchPositionsAsync(string credential, CancellationToken cancellationToken) =>
             Task.FromResult(new ConnectorSyncResult
             {
                 Source = "fio",
                 Status = SyncStatus.Ok,
                 AccountLabel = Iban,
-                Holdings = [new SyncedHolding { Kind = "cash", Symbol = "CZK", Quantity = 195.01m, Currency = "CZK" }],
+                Positions = [new SyncedPosition { AssetType = "cash", Symbol = "CZK", Quantity = 195.01m, Currency = "CZK" }],
             });
     }
 
@@ -39,7 +39,7 @@ public class HttpLoggingTests
     private sealed class ThrowingConnector(bool leakCredentialInMessage) : IConnector
     {
         public string SourceId => "fio";
-        public Task<ConnectorSyncResult> FetchHoldingsAsync(string credential, CancellationToken cancellationToken) =>
+        public Task<ConnectorSyncResult> FetchPositionsAsync(string credential, CancellationToken cancellationToken) =>
             throw new InvalidOperationException(leakCredentialInMessage ? $"boom for {credential}" : "boom");
     }
 

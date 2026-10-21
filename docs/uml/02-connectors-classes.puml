@@ -6,7 +6,7 @@ hide empty members
 
 interface IConnector {
   + SourceId : string
-  + FetchHoldingsAsync(credential : string, cancellationToken : CancellationToken) : Task<ConnectorSyncResult>
+  + FetchPositionsAsync(credential : string, cancellationToken : CancellationToken) : Task<ConnectorSyncResult>
 }
 
 class FioConnector
@@ -19,7 +19,7 @@ class ConnectorSyncResult {
   + Warnings : string [0..*]
 }
 
-class SyncedHolding
+class SyncedPosition
 
 enum SyncStatus {
   Ok
@@ -38,8 +38,8 @@ LoggingConnector "1" --> "1" IConnector : inner
 ' dependency: return type only, not stored
 IConnector ..> ConnectorSyncResult : <<use>>
 
-' composition: holdings belong to one result and die with it
-ConnectorSyncResult "1" *-- "0..*" SyncedHolding : holdings
+' composition: positions belong to one result and die with it
+ConnectorSyncResult "1" *-- "0..*" SyncedPosition : positions
 
 ' association: references one shared enum value
 ConnectorSyncResult "*" --> "1" SyncStatus : status

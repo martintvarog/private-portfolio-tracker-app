@@ -3,6 +3,8 @@
 > Audience: an LLM session picking up this repo. Dense on purpose; not for humans.
 > Scope: facts derived ONLY from `repository/` (code, config, docs, git log).
 > Last full sweep: 2026-10-09 (HEAD `0c5a586`). Update when a work block completes.
+> Last update: 2026-10-21 — ubiquitous-language rename (see `docs/glossary.md`), committed on
+> branch `ubiquitous-language` (not merged to `main`, not pushed).
 > Paths below are relative to `repository/` unless stated.
 
 ## 0. Who / how
@@ -12,6 +14,9 @@
 - Martin: senior-track .NET, junior FE, NEW to infra/DevOps.
 - Code comments mark Martin's decisions ("Martin's decision 2026-09-16") — treat them as
   decided; don't silently change them.
+- Domain terms: `docs/glossary.md` (agreed 2026-10-21) — one name per concept in code, UI,
+  diagrams. Use it when naming anything; key split: **Position** (per source, all code) vs
+  **Holding** (planned client aggregate; UI says "Holdings" for positions until then).
 
 ## 1. Product in one paragraph
 
@@ -36,11 +41,11 @@ infra/main.bicep, infra/rbac.bicep
 src/  Api | Connectors | Domain | MarketData
 tests/ Api.Tests | Connectors.Tests | Domain.Tests
 client/ React+Vite+TS
-docs/ STATUS.md, observability.md, runbook.md, adr/0000–0011, uml/
+docs/ STATUS.md, glossary.md, observability.md, runbook.md, adr/0000–0011, uml/
 README.md               architecture overview (deploy section stale — see §9)
 ```
-Untracked (as of 2026-10-09): `docs/uml/02-connectors-classes.puml`,
-`docs/uml/02-read-domain-classes.puml`. `.idea/`, `*.DotSettings.user` gitignored.
+Untracked (as of 2026-10-21): `docs/uml/02-manual-asset-classes.puml`,
+`docs/uml/03-*.puml`. `.idea/`, `*.DotSettings.user` gitignored.
 
 ## 3. Backend (`src/`)
 
@@ -75,19 +80,19 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   see dependabot ignore).
 
 ### Connectors (`PortfolioTrackerApp.Connectors`)
-- `Contracts/IConnector`: `SourceId`, `FetchHoldingsAsync(credential, ct)`. Laws (doc
+- `Contracts/IConnector`: `SourceId`, `FetchPositionsAsync(credential, ct)`. Laws (doc
   comment): outcomes are data, never thrown; idempotent (Fio uses `periods`, never
   `last`); source-tagged; credentials never persisted/logged incl. URLs and EXCEPTION
   MESSAGES; unsupported instruments → `Warnings` (skip loudly).
-- `ConnectorSyncResult` record: Source, Status, AccountLabel?, AsOf?, Holdings[], Warnings[];
+- `ConnectorSyncResult` record: Source, Status, AccountLabel?, AsOf?, Positions[], Warnings[];
   `Failed(source, status)` factory.
 - `SyncStatus` enum: Ok=1, InvalidCredential=2, Unavailable=3, RateLimited=4 (no 0 on purpose).
-- `SyncedHolding`: Kind ("cash"|"security"|"crypto"|"other"), Symbol, Quantity, Currency, Name?, Isin?.
+- `SyncedPosition`: AssetType ("cash"|"security"|"crypto"|"other"), Symbol, Quantity, Currency, Name?, Isin?.
 - `Fio/FioConnector` (internal): GET
   `v1/rest/periods/{token}/{today}/{today}/transactions.json` on `https://fioapi.fio.cz/`,
   timeout 30 s. Maps: HTTP 500 → InvalidCredential (Fio spec!), 409 → RateLimited,
   other non-2xx / HttpRequestException / timeout / bad JSON / domain ArgumentException →
-  Unavailable. Caller cancellation propagates. Ok → one cash holding from
+  Unavailable. Caller cancellation propagates. Ok → one cash position from
   `accountStatement.info.closingBalance`+`currency`, AccountLabel = IBAN. Promotes through
   Domain (`Money`, `Position.OfCash`) to enforce invariants at the boundary.
 - `Logging/LoggingConnector` (internal decorator): single log line
@@ -104,7 +109,7 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   negatives legal.
 - `Monetary/CurrencyCode` (internal static): structural ISO-4217 check (3 ASCII letters, upper-cased).
 - `Assets/Asset` record + `AssetType {Cash=1, Security=2, Crypto=3, Other=4}`; `Asset.Cash(ccy)`.
-- `Holdings/Position` record: Asset, Quantity (negatives legal), Source (required), AsOf;
+- `Positions/Position` record: Asset, Quantity (negatives legal), Source (required), AsOf;
   `OfCash`, `ValueAt(unitPrice)` (throws on quote-currency mismatch).
 - No ManualAsset / Snapshot / Transaction types exist yet.
 
@@ -132,36 +137,40 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   per encryption; wrong passphrase = GCM tag failure (ADR-0009). Argon2id deferred ("M3").
 - `lib/db.ts`: IndexedDB `portfolio-tracker` v1, store `vault`, single record
   `{id:'vault', version:1, salt, iv, ciphertext}`.
-- `lib/vault.ts`: `VaultData = { syncResults: ConnectorSyncResult[]; credentials: StoredCredential[] }`;
-  `StoredCredential = {source, credential, accountLabel?}`; `createVault`, `unlockVault`,
+- `lib/vault.ts`: `VaultData = { syncResults: ConnectorSyncResult[]; connections: Connection[] }`;
+  `Connection = {source, credential, accountLabel?}`; `createVault`, `unlockVault`,
   `persistVault` (reuses salt, fresh IV), `vaultExists`. Stale "TODO (Martin)" comments
   remain above already-implemented `unlockVault`/`persistVault`.
+  Vault format changed 2026-10-21 (`credentials`→`connections`, `holdings`→`positions`,
+  `kind`→`assetType`), version still 1, NO migration (Martin: no deployed app) → a vault
+  created before that must be deleted (DevTools → IndexedDB `portfolio-tracker`).
 - `lib/api.ts`: wire types mirroring backend contracts (string-union `SyncStatus`);
   `postSync()` returns `{result, requestId}` (from `X-Request-Id`); non-2xx → `SyncError`
   carrying `requestId` and ProblemDetails `title`.
 - `features/vault/UnlockPage.tsx`: create/unlock form; "No recovery" notice.
-- `features/dashboard/DashboardPage.tsx`: derives holdings from `data.syncResults` every
-  render (no own state); CZK cash valued 1:1, else `valueCzk` undefined → "—" + banner
+- `features/dashboard/DashboardPage.tsx`: derives positions from `data.syncResults` every
+  render (no own state); CZK cash valued 1:1, else `displayValue` undefined → "—" + banner
   "N holding(s) not valued yet". `onDataChange` prop accepted but unused (kept for future cards).
-  `NetWorthCard` supports optional `deltaCzk` (unused yet).
-- `features/holdings/HoldingsTable.tsx` + `types.ts` (`Holding` = temporary view type,
-  to be replaced by a client domain — "Martin's code").
-- `features/connections/ConnectionsPage.tsx`: one `ConnectionCard` per stored credential,
+  `NetWorthCard` props `netWorth`, optional `netWorthDelta` (unused yet).
+- `features/positions/PositionsTable.tsx` + `types.ts` (`Position` = temporary view type,
+  to be replaced by a client domain — "Martin's code"; `source` = id, `connectionLabel` =
+  display text). UI heading stays "Holdings" (glossary).
+- `features/connections/ConnectionsPage.tsx`: one `ConnectionCard` per stored connection,
   joined at render to `syncResults` by `source`; Remove = `window.confirm` → drops the
-  credential AND all syncResults of that source (Martin, 2026-09-16). Hosts `SyncForm`
-  prefilled with the first stored fio credential.
+  connection AND all syncResults of that source (Martin, 2026-09-16). Hosts `SyncForm`
+  with `initialCredential` = the first fio connection's credential.
 - `features/connections/ConnectionCard.tsx`: status chip per `SyncStatus`, account label,
   last sync (cs-CZ), warnings, Remove button. `sourceNames = {fio: 'Fio banka'}`.
-- `features/sync/SyncForm.tsx`: `useMutation(postSync('fio', token))`; on Ok →
-  `onSynced(result, token)` (credential saved only after successful sync, ADR-0009);
+- `features/sync/SyncForm.tsx`: `useMutation(postSync('fio', credential))`; on Ok →
+  `onSynced(result, credential)` (connection saved only after successful sync, ADR-0009);
   per-status messages; "Reference for support" click-to-copy chip on any failure/non-Ok.
 - `index.html` `<title>` is still `client`.
 
 ## 5. Tests
 
-- Last verified: 43 green on 2026-09-15 (`dotnet test` at repo root). Not re-run
-  2026-10-09 (no `dotnet` in that sandbox); only change since = commit `46c35d2`
-  (moved logging tests into `LoggingTests/` folders + namespaces, no logic change).
+- Last verified: 43 green on 2026-10-21 after the glossary rename (`dotnet build -c Release`
+  + `dotnet test`, run in the `mcr.microsoft.com/dotnet/sdk:10.0` container — see §14);
+  production Docker image built and smoke-tested the same day.
 - Stack: xUnit 2.9.3, Microsoft.NET.Test.Sdk 18.10.1, coverlet, Mvc.Testing 10.0.12. No mocking lib.
 - Domain.Tests: `MoneyTests` (equality, arithmetic, exact decimals, mismatch throws,
   normalization), `PositionTests` (ValueAt, currency mismatch, cash, negatives, source required).
@@ -254,11 +263,11 @@ X-Request-Id amendment). New ADRs follow `0000-adr-template.md`.
 
 1. Sidebar `Holdings` → `/holdings`, but no such route → hits catch-all "Page not found".
    Holdings only render on `/`. Decision needed: add route or point nav to `/`.
-2. Multi-account per source is half-supported: credentials are keyed by
+2. Multi-account per source is half-supported: connections are keyed by
    source+accountLabel, but `syncResults` are replaced/joined/removed by `source` only.
    Second Fio account sync overwrites the first account's holdings; both cards show the
    same result; removing one card drops all Fio holdings; `SyncForm` prefills only the
-   first fio credential.
+   first fio connection's credential.
 3. README "Deployment" says push to main deploys — false while deploy is paused.
    README Conventions cites `docs/adr/template.md` (actual: `0000-adr-template.md`).
 4. ADR-0004 lists `docker-compose.yml` as repo infra — file does not exist (planned to
@@ -308,6 +317,9 @@ override as its own use case or not; whether to fix §9 gap 2 (multi-account) fi
 ## 14. Commands
 
 - `dotnet build` / `dotnet test` at repo root (.NET 10 SDK).
+- Sandbox without `dotnet`: copy the repo without `bin/obj/node_modules/.git` to a scratch dir
+  (so host `obj/` isn't rewritten), then `docker run --rm -v <copy>:/src -w /src
+  mcr.microsoft.com/dotnet/sdk:10.0 bash -c "dotnet build -c Release && dotnet test -c Release --no-build"`.
 - `dotnet run --project src/PortfolioTrackerApp.Api` (:5018) + `cd client && npm install && npm run dev` (:5173).
 - Client lint/format: `npm run lint` (oxlint), `npm run format` (prettier). No client tests.
 - Production-style: `npm run build`, copy `client/dist/*` → `src/PortfolioTrackerApp.Api/wwwroot/`, open :5018.

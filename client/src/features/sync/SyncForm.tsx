@@ -13,20 +13,20 @@ const statusMessages: Record<string, string> = {
 type Props = {
   onSynced: (result: ConnectorSyncResult, credential: string) => void
   // Prefilled from the vault when this source synced successfully before.
-  storedCredential?: string
+  initialCredential?: string
 }
 
-export function SyncForm({ onSynced, storedCredential }: Props) {
+export function SyncForm({ onSynced, initialCredential }: Props) {
   // useState's argument is only the INITIAL value (used on mount) — later
-  // changes to storedCredential don't overwrite what the user typed.
-  const [token, setToken] = useState(storedCredential ?? '')
+  // changes to initialCredential don't overwrite what the user typed.
+  const [credential, setCredential] = useState(initialCredential ?? '')
   // 'copied' is transient UI state: flips true on click, back to false after 1.5 s.
   const [copied, setCopied] = useState(false)
 
   const sync = useMutation({
-    mutationFn: () => postSync('fio', token),
+    mutationFn: () => postSync('fio', credential),
     onSuccess: ({ result }) => {
-      if (result.status === 'Ok') onSynced(result, token)
+      if (result.status === 'Ok') onSynced(result, credential)
     },
   })
 
@@ -56,10 +56,10 @@ export function SyncForm({ onSynced, storedCredential }: Props) {
         <input
           type="password"
           placeholder="Paste your Fio API token"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
+          value={credential}
+          onChange={(event) => setCredential(event.target.value)}
         />
-        <button type="submit" disabled={sync.isPending || token.trim() === ''}>
+        <button type="submit" disabled={sync.isPending || credential.trim() === ''}>
           {sync.isPending ? 'Syncing…' : 'Sync'}
         </button>
       </form>
@@ -84,7 +84,7 @@ export function SyncForm({ onSynced, storedCredential }: Props) {
       )}
       {result?.status === 'Ok' && (
         <div className="muted">
-          Synced {result.holdings.length} holding(s)
+          Synced {result.positions.length} holding(s)
           {result.accountLabel ? ` from ${result.accountLabel}` : ''}.
           {result.warnings.map((warning) => (
             <div key={warning}>⚠ {warning}</div>
