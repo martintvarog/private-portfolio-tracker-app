@@ -38,7 +38,7 @@ public class ConnectorsModuleLoggingTests
 
         await using var provider = services.BuildServiceProvider();
         var connector = provider.GetRequiredService<IConnector>();
-        var result = await connector.FetchHoldingsAsync(Token, CancellationToken.None);
+        var result = await connector.FetchPositionsAsync(Token, CancellationToken.None);
         return (result, logs.Lines.ToList());
     }
 
@@ -142,7 +142,7 @@ public class ConnectorsModuleLoggingTests
         await using var provider = services.BuildServiceProvider();
 
         Assert.Contains(HandlerChain(provider, nameof(FioConnector)), IsFactoryLoggingHandler);
-        await provider.GetRequiredService<FioConnector>().FetchHoldingsAsync(Token, CancellationToken.None);
+        await provider.GetRequiredService<FioConnector>().FetchPositionsAsync(Token, CancellationToken.None);
 
         Assert.Contains(logs.Lines, l => l.Category.StartsWith("System.Net.Http.HttpClient") && l.Message.Contains(Token));
     }

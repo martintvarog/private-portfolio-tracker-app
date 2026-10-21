@@ -1,7 +1,7 @@
 using PortfolioTrackerApp.Domain.Assets;
 using PortfolioTrackerApp.Domain.Monetary;
 
-namespace PortfolioTrackerApp.Domain.Holdings;
+namespace PortfolioTrackerApp.Domain.Positions;
 
 /// <summary>
 /// A quantity of an asset held at one source at one moment — the normalized form
@@ -14,7 +14,7 @@ public sealed record Position
     public Asset Asset { get; }
     public decimal Quantity { get; }
 
-    /// <summary>Which connector/source reported this holding, e.g. "fio", "ibkr", "manual".</summary>
+    /// <summary>Which connector/source reported this position, e.g. "fio", "ibkr", "manual".</summary>
     public string Source { get; }
 
     public DateTimeOffset AsOf { get; }
@@ -30,7 +30,7 @@ public sealed record Position
         AsOf = asOf;
     }
 
-    /// <summary>Cash holdings: quantity is the amount, unit price is 1 by construction.</summary>
+    /// <summary>Cash positions: quantity is the amount, unit price is 1 by construction.</summary>
     public static Position OfCash(Money amount, string source, DateTimeOffset asOf) =>
         new(Asset.Cash(amount.Currency), amount.Amount, source, asOf);
 

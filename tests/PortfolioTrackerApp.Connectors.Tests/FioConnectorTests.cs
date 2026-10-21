@@ -16,18 +16,18 @@ public class FioConnectorTests
         """;
 
     [Fact]
-    public async Task Valid_response_yields_one_cash_holding_with_iban_label()
+    public async Task Valid_response_yields_one_cash_position_with_iban_label()
     {
         var result = await Fetch(HttpStatusCode.OK, ValidBody);
 
         Assert.Equal(SyncStatus.Ok, result.Status);
         Assert.Equal("fio", result.Source);
         Assert.Equal("CZ7920100000002400222222", result.AccountLabel);
-        var holding = Assert.Single(result.Holdings);
-        Assert.Equal("cash", holding.Kind);
-        Assert.Equal("CZK", holding.Symbol);
-        Assert.Equal("CZK", holding.Currency);
-        Assert.Equal(195.01m, holding.Quantity);
+        var position = Assert.Single(result.Positions);
+        Assert.Equal("cash", position.AssetType);
+        Assert.Equal("CZK", position.Symbol);
+        Assert.Equal("CZK", position.Currency);
+        Assert.Equal(195.01m, position.Quantity);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class FioConnectorTests
         var result = await Fetch(HttpStatusCode.InternalServerError, "");
 
         Assert.Equal(SyncStatus.InvalidCredential, result.Status);
-        Assert.Empty(result.Holdings);
+        Assert.Empty(result.Positions);
     }
 
     [Fact]
@@ -90,6 +90,6 @@ public class FioConnectorTests
         };
         var connector = new FioConnector(httpClient, TimeProvider.System);
 
-        return await connector.FetchHoldingsAsync(credential, CancellationToken.None);
+        return await connector.FetchPositionsAsync(credential, CancellationToken.None);
     }
 }

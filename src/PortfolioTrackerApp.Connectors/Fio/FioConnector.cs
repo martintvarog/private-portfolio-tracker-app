@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using PortfolioTrackerApp.Connectors.Contracts;
-using PortfolioTrackerApp.Domain.Holdings;
+using PortfolioTrackerApp.Domain.Positions;
 using PortfolioTrackerApp.Domain.Monetary;
 
 namespace PortfolioTrackerApp.Connectors.Fio;
@@ -18,7 +18,7 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
 
     public string SourceId => Source;
 
-    public async Task<ConnectorSyncResult> FetchHoldingsAsync(string credential, CancellationToken cancellationToken)
+    public async Task<ConnectorSyncResult> FetchPositionsAsync(string credential, CancellationToken cancellationToken)
     {
         var token = credential.Trim();
         if (token.Length == 0)
@@ -64,11 +64,11 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
                 Status = SyncStatus.Ok,
                 AccountLabel = info.Iban,
                 AsOf = position.AsOf,
-                Holdings =
+                Positions =
                 [
-                    new SyncedHolding
+                    new SyncedPosition
                     {
-                        Kind = "cash",
+                        AssetType = "cash",
                         Symbol = position.Asset.Symbol,
                         Quantity = position.Quantity,
                         Currency = position.Asset.QuoteCurrency,

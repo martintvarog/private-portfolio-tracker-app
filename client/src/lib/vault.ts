@@ -2,9 +2,10 @@ import type { ConnectorSyncResult } from './api.ts'
 import {decryptJson, deriveKey, encryptJson, randomBytes} from './crypto.ts'
 import {loadVaultRecord, saveVaultRecord, type VaultRecord} from './db.ts'
 
-// One entry per credential — Fio issues one token PER ACCOUNT, so two Fio
-// accounts = two entries with the same source and different accountLabel.
-export type StoredCredential = {
+// One connection per credential — Fio issues one token PER ACCOUNT, so two Fio
+// accounts = two connections with the same source and different accountLabel.
+// Created by the first successful sync (docs/glossary.md).
+export type Connection = {
   source: string
   credential: string
   accountLabel?: string
@@ -12,7 +13,7 @@ export type StoredCredential = {
 
 export type VaultData = {
   syncResults: ConnectorSyncResult[]
-  credentials: StoredCredential[]
+  connections: Connection[]
 }
 export type UnlockedVault = { key: CryptoKey; salt: Uint8Array<ArrayBuffer>; data: VaultData }
 
@@ -28,7 +29,7 @@ export async function createVault(passphrase: string): Promise<UnlockedVault> {
   const salt = randomBytes(saltLength)
   const key = await deriveKey(passphrase, salt)
 
-  const emptyData: VaultData = { syncResults: [], credentials: [] }
+  const emptyData: VaultData = { syncResults: [], connections: [] }
   const { iv, ciphertext } = await encryptJson(key, emptyData)
 
   await saveVaultRecord({ id: 'vault', version: vaultVersion, salt, iv, ciphertext })

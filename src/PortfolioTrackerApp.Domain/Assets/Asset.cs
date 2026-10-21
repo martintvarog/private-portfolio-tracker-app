@@ -1,4 +1,4 @@
-using PortfolioTrackerApp.Domain.Holdings;
+using PortfolioTrackerApp.Domain.Positions;
 using PortfolioTrackerApp.Domain.Monetary;
 
 namespace PortfolioTrackerApp.Domain.Assets;
@@ -12,7 +12,7 @@ public enum AssetType
 }
 
 /// <summary>
-/// Identity of a thing that can be owned and priced — the instrument, not the holding.
+/// Identity of a thing that can be owned and priced — the instrument, not the position.
 /// "VWCE" is the same asset whether Fio, IBKR or a CSV mentions it; connectors resolve
 /// their dialects onto this shared identity. Quantity lives on <see cref="Position"/>.
 /// </summary>

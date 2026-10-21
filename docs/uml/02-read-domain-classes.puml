@@ -1,0 +1,64 @@
+@startuml
+' Step 2 reading exercise — written by Claude, interpreted by Martin
+' Source: src/PortfolioTrackerApp.Domain (Monetary, Assets, Positions)
+!pragma layout smetana
+hide empty members
+
+package Monetary {
+  class Money <<value object>> {
+    + Amount : decimal
+    + Currency : string
+    + {static} Zero(currency : string) : Money
+    + operator +(left : Money, right : Money) : Money
+    + operator *(money : Money, factor : decimal) : Money
+    - {static} EnsureSameCurrency(left : Money, right : Money, operation : string)
+  }
+
+  class CurrencyCode <<static>> {
+    + {static} Normalize(currency : string, paramName : string) : string
+  }
+
+  class CurrencyMismatchException
+}
+
+class InvalidOperationException
+
+package Assets {
+  enum AssetType {
+    Cash
+    Security
+    Crypto
+    Other
+  }
+
+  class Asset <<value object>> {
+    + Symbol : string
+    + Name : string
+    + QuoteCurrency : string
+    + Isin : string [0..1]
+    + {static} Cash(currency : string) : Asset
+  }
+}
+
+package Positions {
+  class Position <<value object>> {
+    + Quantity : decimal
+    + Source : string
+    + AsOf : DateTimeOffset
+    + {static} OfCash(amount : Money, source : string, asOf : DateTimeOffset) : Position
+    + ValueAt(unitPrice : Money) : Money
+  }
+}
+
+Position "*" --> "1" Asset : asset
+Asset "*" --> "1" AssetType : type
+
+CurrencyMismatchException --|> InvalidOperationException
+
+Money ..> CurrencyCode : <<use>>
+Asset ..> CurrencyCode : <<use>>
+Money ..> CurrencyMismatchException : <<throw>>
+Position ..> Money : <<use>>
+Position ..> CurrencyMismatchException : <<throw>>
+
+@enduml

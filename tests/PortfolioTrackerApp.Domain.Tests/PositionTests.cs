@@ -1,6 +1,6 @@
 using PortfolioTrackerApp.Domain;
 using PortfolioTrackerApp.Domain.Assets;
-using PortfolioTrackerApp.Domain.Holdings;
+using PortfolioTrackerApp.Domain.Positions;
 using PortfolioTrackerApp.Domain.Monetary;
 
 namespace PortfolioTrackerApp.Domain.Tests;

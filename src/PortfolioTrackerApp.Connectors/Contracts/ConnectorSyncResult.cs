@@ -2,8 +2,8 @@ namespace PortfolioTrackerApp.Connectors.Contracts;
 
 /// <summary>
 /// Outcome of one connector sync. Always usable: on failure, <see cref="Status"/>
-/// says why and <see cref="Holdings"/> is empty — one dead connector must never
-/// poison the others' results. Contains personal data (account label, holdings):
+/// says why and <see cref="Positions"/> is empty — one dead connector must never
+/// poison the others' results. Contains personal data (account label, positions):
 /// transits to the client vault, is never persisted or logged server-side.
 /// </summary>
 public sealed record ConnectorSyncResult
@@ -17,10 +17,10 @@ public sealed record ConnectorSyncResult
     /// institution (Fio: one token per account), e.g. a masked account number.</summary>
     public string? AccountLabel { get; init; }
 
-    /// <summary>Moment the institution reported the holdings as valid.</summary>
+    /// <summary>Moment the institution reported the positions as valid.</summary>
     public DateTimeOffset? AsOf { get; init; }
 
-    public IReadOnlyList<SyncedHolding> Holdings { get; init; } = [];
+    public IReadOnlyList<SyncedPosition> Positions { get; init; } = [];
 
     /// <summary>"Skip loudly": anything excluded or odd is reported here, never dropped
     /// silently — the number shown to the user must be honest about its gaps.</summary>

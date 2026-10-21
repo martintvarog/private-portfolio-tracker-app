@@ -31,7 +31,7 @@ public static class SyncEndpoints
                     title: $"Unknown source '{request.Source}'.",
                     statusCode: StatusCodes.Status400BadRequest);
 
-            var result = await connector.FetchHoldingsAsync(request.Credential, cancellationToken);
+            var result = await connector.FetchPositionsAsync(request.Credential, cancellationToken);
             return Results.Ok(result);
         });
 

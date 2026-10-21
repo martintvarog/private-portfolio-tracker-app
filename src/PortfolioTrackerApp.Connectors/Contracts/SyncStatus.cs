@@ -6,7 +6,7 @@ namespace PortfolioTrackerApp.Connectors.Contracts;
 /// </summary>
 public enum SyncStatus
 {
-    /// <summary>Holdings fetched successfully.</summary>
+    /// <summary>Positions fetched successfully.</summary>
     Ok = 1,
 
     /// <summary>Credential rejected by the institution — non-existent, mistyped,

@@ -1,11 +1,11 @@
 // Wire types — mirror the backend Connectors contracts (ADR-0003).
 // Kept separate from the client domain on purpose: the wire shape is the
-// backend's; what the app *means* by a holding is the client's.
+// backend's; what the app *means* by a position is the client's.
 
 export type SyncStatus = 'Ok' | 'InvalidCredential' | 'Unavailable' | 'RateLimited'
 
-export type SyncedHolding = {
-  kind: 'cash' | 'security' | 'crypto' | 'other'
+export type SyncedPosition = {
+  assetType: 'cash' | 'security' | 'crypto' | 'other'
   symbol: string
   quantity: number
   currency: string
@@ -18,7 +18,7 @@ export type ConnectorSyncResult = {
   status: SyncStatus
   accountLabel?: string
   asOf?: string
-  holdings: SyncedHolding[]
+  positions: SyncedPosition[]
   warnings: string[]
 }
 
