@@ -1,5 +1,6 @@
 using PortfolioTrackerApp.Domain;
 using PortfolioTrackerApp.Domain.Monetary;
+using PortfolioTrackerApp.Domain.Monetary.Currency;
 
 namespace PortfolioTrackerApp.Domain.Tests;
 

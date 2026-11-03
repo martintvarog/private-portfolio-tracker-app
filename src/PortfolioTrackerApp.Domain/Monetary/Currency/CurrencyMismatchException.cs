@@ -1,4 +1,4 @@
-namespace PortfolioTrackerApp.Domain.Monetary;
+namespace PortfolioTrackerApp.Domain.Monetary.Currency;
 
 /// <summary>
 /// Thrown when amounts in different currencies are combined without an explicit

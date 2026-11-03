@@ -1,4 +1,5 @@
 using System.Globalization;
+using PortfolioTrackerApp.Domain.Monetary.Currency;
 
 namespace PortfolioTrackerApp.Domain.Monetary;
 

@@ -1,4 +1,4 @@
-namespace PortfolioTrackerApp.Domain.Monetary;
+namespace PortfolioTrackerApp.Domain.Monetary.Currency;
 
 /// <summary>
 /// Shared validation for ISO-4217 currency codes ("CZK", "EUR").
