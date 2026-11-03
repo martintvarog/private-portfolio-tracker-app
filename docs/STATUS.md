@@ -3,8 +3,8 @@
 > Audience: an LLM session picking up this repo. Dense on purpose; not for humans.
 > Scope: facts derived ONLY from `repository/` (code, config, docs, git log).
 > Last full sweep: 2026-10-09 (HEAD `0c5a586`). Update when a work block completes.
-> Last update: 2026-10-21 — ubiquitous-language rename (see `docs/glossary.md`), committed on
-> branch `ubiquitous-language` (not merged to `main`, not pushed).
+> Last update: 2026-11-03 — Domain tests review (Asset tests added, MoneyTests split,
+> PositionTests reworked); committed on `main` (not pushed).
 > Paths below are relative to `repository/` unless stated.
 
 ## 0. Who / how
@@ -172,8 +172,16 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   + `dotnet test`, run in the `mcr.microsoft.com/dotnet/sdk:10.0` container — see §14);
   production Docker image built and smoke-tested the same day.
 - Stack: xUnit 2.9.3, Microsoft.NET.Test.Sdk 18.10.1, coverlet, Mvc.Testing 10.0.12. No mocking lib.
-- Domain.Tests: `MoneyTests` (equality, arithmetic, exact decimals, mismatch throws,
-  normalization), `PositionTests` (ValueAt, currency mismatch, cash, negatives, source required).
+- Domain: 34 green on 2026-11-03 (local `dotnet test` on a scratch copy); Connectors 17 +
+  Api 8 unchanged since.
+- Domain.Tests (Martin, 2026-11-03: only important business rules, comments only where they
+  state a rule's why; `TheoryData`+`[MemberData]` for decimal cases):
+  `AssetTests` (minimal asset: Name→Symbol, Isin null; invalid/empty quote currency; empty
+  symbol; `Asset.Cash`), `MoneyTests.cs` partial base (construction, equality, currency
+  shape+upper-case, culture-independent `ToString`), `MoneyTests.Operators.cs` (+ − × both
+  ways, negation, exact decimals, mismatch throws, no rounding), `PositionTests` (construction,
+  source required, `OfCash`, ValueAt + mismatch, negatives). Untested by choice so far:
+  currency input trimming/non-ASCII/too-short, Position source trimming.
 - Connectors.Tests: `FioConnectorTests` (valid→cash+IBAN, 500→InvalidCredential,
   409→RateLimited, other→Unavailable, garbage body, invalid currency, empty credential);
   `StubHttpMessageHandler`; `LoggingTests/` = `LoggingConnectorTests`,

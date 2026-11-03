@@ -1,4 +1,3 @@
-using PortfolioTrackerApp.Domain;
 using PortfolioTrackerApp.Domain.Assets;
 using PortfolioTrackerApp.Domain.Positions;
 using PortfolioTrackerApp.Domain.Monetary;
@@ -12,6 +11,36 @@ public class PositionTests
         new(AssetType.Security, "VWCE", "EUR", "Vanguard FTSE All-World", isin: "IE00BK5BQT80");
 
     private static readonly DateTimeOffset AsOf = new(2026, 8, 10, 14, 32, 0, TimeSpan.FromHours(2));
+
+    [Fact]
+    public void Position_constructs_with_given_asset_quantity_source_and_time()
+    {
+        var position = new Position(Vwce, 12m, "ibkr", AsOf);
+
+        Assert.Equal(Vwce, position.Asset);
+        Assert.Equal(12m, position.Quantity);
+        Assert.Equal("ibkr", position.Source);
+        Assert.Equal(AsOf, position.AsOf);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void Position_requires_a_source(string source)
+    {
+        Assert.Throws<ArgumentException>(() => new Position(Vwce, 1m, source, AsOf));
+    }
+
+    [Fact]
+    public void Cash_position_holds_the_amount_as_quantity_of_its_currency()
+    {
+        var cash = Position.OfCash(new Money(84_000m, "CZK"), "fio", AsOf);
+
+        Assert.Equal(Asset.Cash("CZK"), cash.Asset);
+        Assert.Equal(84_000m, cash.Quantity);
+        Assert.Equal("fio", cash.Source);
+        Assert.Equal(AsOf, cash.AsOf);
+    }
 
     [Fact]
     public void Value_is_quantity_times_unit_price()
@@ -31,25 +60,10 @@ public class PositionTests
     }
 
     [Fact]
-    public void Cash_is_a_position_whose_unit_price_is_one()
-    {
-        var cash = Position.OfCash(new Money(84_000m, "CZK"), "fio", AsOf);
-
-        Assert.Equal(AssetType.Cash, cash.Asset.Type);
-        Assert.Equal(new Money(84_000m, "CZK"), cash.ValueAt(new Money(1m, "CZK")));
-    }
-
-    [Fact]
     public void Negative_quantity_is_legal_liabilities_and_shorts_exist()
     {
         var position = new Position(Vwce, -3m, "ibkr", AsOf);
 
         Assert.Equal(new Money(-429.30m, "EUR"), position.ValueAt(new Money(143.10m, "EUR")));
-    }
-
-    [Fact]
-    public void Position_requires_a_source()
-    {
-        Assert.Throws<ArgumentException>(() => new Position(Vwce, 1m, "  ", AsOf));
     }
 }
