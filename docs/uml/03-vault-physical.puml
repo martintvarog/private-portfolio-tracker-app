@@ -1,0 +1,19 @@
+@startuml
+' Step 3 creating exercise 1 — physical level, dictated by Martin
+' What IndexedDB stores for 03-vault-logical.puml (TO-BE)
+!pragma layout smetana
+hide circle
+hide empty members
+
+class VaultRecord {
+  id
+  version
+  salt
+  iv
+  ciphertext
+}
+class Vault
+
+VaultRecord ..> Vault : <<encrypts>>
+
+@enduml

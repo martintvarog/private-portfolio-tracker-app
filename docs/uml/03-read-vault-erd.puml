@@ -1,0 +1,31 @@
+@startuml
+' Step 3 reading — illustration only, NOT a design decision:
+' how ConnectorSyncResult + SyncedPosition (client/src/lib/api.ts) would look as tables.
+' The ids are invented for the illustration; today the vault is one JSON blob.
+!pragma layout smetana
+hide circle
+
+entity ConnectorSyncResult {
+  * id : number <<PK>>
+  --
+  * source : string
+  * status : string
+  accountLabel : string
+  asOf : string
+}
+
+entity SyncedPosition {
+  * id : number <<PK>>
+  --
+  * syncResultId : number <<FK>>
+  * assetType : string
+  * symbol : string
+  * quantity : number
+  * currency : string
+  name : string
+  isin : string
+}
+
+ConnectorSyncResult ||--o{ SyncedPosition
+
+@enduml

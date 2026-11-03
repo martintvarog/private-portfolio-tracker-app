@@ -1,0 +1,60 @@
+@startuml
+' Step 2 creating exercise — relations dictated by Martin, properties filled by Claude
+' Planned feature (client-only, stored in the vault) — no code yet
+!pragma layout smetana
+hide empty members
+
+enum ManualAssetType {
+  RealEstate
+  Vehicle
+  PreciousMetals
+  Collectible
+  Cash
+  Other
+}
+
+enum Liquidity {
+  Liquid
+  Illiquid
+}
+
+class ManualAsset {
+  + Name : string
+  + CurrentValue : number
+  + Currency : string
+  + ValuationDate : date
+  + Liquidity : Liquidity
+  + Note : string [0..1]
+  + DisposedOn : date [0..1]
+}
+
+package "client/src/features/holdings/types.ts" {
+  class Holding
+}
+
+ManualAsset "*" --> "1" ManualAssetType : type
+ManualAsset "*" --> "1" Liquidity : liquidity
+
+ManualAssetType "*" --> "1" Liquidity : defaultLiquidity
+
+note bottom of Liquidity
+  defaultLiquidity: RealEstate, Vehicle,
+  Collectible, Other → Illiquid;
+  PreciousMetals, Cash → Liquid.
+  ManualAsset.liquidity starts as the
+  type's default; user may override.
+end note
+
+ManualAsset ..> Holding : <<derive>>
+
+note right of Holding
+  Derived on every render, never stored.
+  Disposed assets are not derived.
+end note
+
+note bottom of ManualAsset
+  Value history (append, never overwrite):
+  deferred to the "Snapshots & history" epic.
+end note
+
+@enduml

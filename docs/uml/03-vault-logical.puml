@@ -1,0 +1,31 @@
+@startuml
+' Step 3 creating exercise 1 — logical level, dictated by Martin
+' Refines 03-vault-conceptual.puml (TO-BE)
+!pragma layout smetana
+hide circle
+hide empty members
+
+class Vault
+class Connection {
+  source {key}
+  credential
+  accountLabel {key}
+}
+class "Sync result" as SyncResult {
+  asOf
+  warnings : string [0..*]
+}
+class Position {
+  assetType : cash | security | crypto | other
+  symbol
+  quantity : number
+  currency
+  name [0..1]
+  isin [0..1]
+}
+
+Vault "1" *-- "0..*" Connection : has
+SyncResult "1" *-- "0..*" Position : has
+Connection "1" *-- "1..*" SyncResult : produces
+
+@enduml

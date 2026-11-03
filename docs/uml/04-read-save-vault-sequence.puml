@@ -1,0 +1,32 @@
+@startuml
+' Step 4 reading exercise — sequence diagram, written by Claude for Martin to interpret
+' AS-IS: saving vault data after a change (client/src/App.tsx updateVaultData)
+!pragma layout smetana
+autoactivate on
+
+participant ConnectionsPage
+participant "App\n(updateVaultData)" as App
+participant "vault.ts\n(persistVault)" as Vault
+participant "crypto.ts\n(encryptJson)" as Crypto
+participant "db.ts\n(saveVaultRecord)" as Db
+database IndexedDB
+
+ConnectionsPage -> App : updateVaultData(data)
+
+alt vault === null
+  App --> ConnectionsPage : return (nothing saved)
+else vault unlocked
+  App -> Vault : persistVault(updated)
+  Vault -> Crypto : encryptJson(key, data)
+  Crypto --> Vault : iv, ciphertext
+  Vault -> Db : saveVaultRecord(record)
+  Db -> IndexedDB : put('vault', record)
+  IndexedDB --> Db
+  Db --> Vault
+  Vault --> App
+  App -> App : setVault(updated)
+  App --> App
+  App --> ConnectionsPage
+end
+
+@enduml

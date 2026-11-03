@@ -1,0 +1,50 @@
+@startuml
+' Step 3 reading exercise — written by Claude, interpreted by Martin
+' Source: client/src/lib/vault.ts, db.ts, api.ts
+!pragma layout smetana
+hide empty members
+
+package "lib/db.ts (stored in IndexedDB)" {
+  class VaultRecord {
+    + id : 'vault' {key}
+    + version : 1
+    + salt : bytes
+    + iv : bytes
+    + ciphertext : bytes
+  }
+}
+
+package "lib/vault.ts (in memory)" {
+  class UnlockedVault {
+    + key : CryptoKey
+    + salt : bytes
+  }
+  class VaultData
+  class Connection {
+    + source : string
+    + credential : string
+    + accountLabel : string [0..1]
+  }
+}
+
+package "lib/api.ts" {
+  class ConnectorSyncResult {
+    + source : string
+    + status : SyncStatus
+    + accountLabel : string [0..1]
+    + asOf : string [0..1]
+  }
+}
+
+UnlockedVault "1" *-- "1" VaultData : data
+VaultData "1" *-- "0..*" Connection : connections
+VaultData "1" *-- "0..*" ConnectorSyncResult : syncResults
+
+VaultRecord ..> VaultData : <<encrypts>>
+
+note bottom of VaultRecord
+  ciphertext = VaultData as JSON,
+  encrypted with the key from UnlockedVault.
+end note
+
+@enduml

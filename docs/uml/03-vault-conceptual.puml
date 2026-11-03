@@ -1,0 +1,17 @@
+@startuml
+' Step 3 creating exercise 1 — conceptual level, dictated by Martin
+' TO-BE (target), not current code — Martin's decision 2026-10-21 (as-is is readable from code)
+!pragma layout smetana
+hide circle
+hide empty members
+
+class Vault
+class Connection
+class "Sync result" as SyncResult
+class Position
+
+Vault "1" *-- "0..*" Connection : has
+SyncResult "1" *-- "0..*" Position : has
+Connection "1" *-- "1..*" SyncResult : produces
+
+@enduml
