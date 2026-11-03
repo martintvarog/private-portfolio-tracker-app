@@ -3,8 +3,7 @@
 > Audience: an LLM session picking up this repo. Dense on purpose; not for humans.
 > Scope: facts derived ONLY from `repository/` (code, config, docs, git log).
 > Last full sweep: 2026-10-09 (HEAD `0c5a586`). Update when a work block completes.
-> Last update: 2026-11-03 — Domain tests review (Asset tests added, MoneyTests split,
-> PositionTests reworked); committed on `main` (not pushed).
+> Last update: 2026-11-03 — Domain + FioConnector tests review; committed on `main` (not pushed).
 > Paths below are relative to `repository/` unless stated.
 
 ## 0. Who / how
@@ -172,8 +171,8 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   + `dotnet test`, run in the `mcr.microsoft.com/dotnet/sdk:10.0` container — see §14);
   production Docker image built and smoke-tested the same day.
 - Stack: xUnit 2.9.3, Microsoft.NET.Test.Sdk 18.10.1, coverlet, Mvc.Testing 10.0.12. No mocking lib.
-- Domain: 34 green on 2026-11-03 (local `dotnet test` on a scratch copy); Connectors 17 +
-  Api 8 unchanged since.
+- 2026-11-03 (local `dotnet test` on a scratch copy): Domain 34, Connectors 21 green; Api 8
+  unchanged since.
 - Domain.Tests (Martin, 2026-11-03: only important business rules, comments only where they
   state a rule's why; `TheoryData`+`[MemberData]` for decimal cases):
   `AssetTests` (minimal asset: Name→Symbol, Isin null; invalid/empty quote currency; empty
@@ -183,7 +182,9 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   source required, `OfCash`, ValueAt + mismatch, negatives). Untested by choice so far:
   currency input trimming/non-ASCII/too-short, Position source trimming.
 - Connectors.Tests: `FioConnectorTests` (valid→cash+IBAN, 500→InvalidCredential,
-  409→RateLimited, other→Unavailable, garbage body, invalid currency, empty credential);
+  409→RateLimited, other→Unavailable, garbage body, invalid currency, empty credential,
+  exact `periods` URL for today (fixed TimeProvider), network failure/timeout→Unavailable,
+  caller cancellation propagates; new tests mutation-checked);
   `StubHttpMessageHandler`; `LoggingTests/` = `LoggingConnectorTests`,
   `ConnectorsModuleLoggingTests` (real DI + stubbed Fio; every connector wrapped and its
   HttpClient has no logging handler; control test proving that without
