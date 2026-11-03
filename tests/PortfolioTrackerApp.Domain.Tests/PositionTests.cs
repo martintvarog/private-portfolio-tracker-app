@@ -55,7 +55,6 @@ public class PositionTests
     {
         var position = new Position(Vwce, 12m, "ibkr", AsOf);
 
-        // VWCE is quoted in EUR; a CZK price is a wiring bug, not an FX conversion.
         Assert.Throws<CurrencyMismatchException>(() => position.ValueAt(new Money(3520m, "CZK")));
     }
 

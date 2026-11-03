@@ -3,7 +3,6 @@ using System.Text;
 
 namespace PortfolioTrackerApp.Connectors.Tests;
 
-/// <summary>Returns a fixed response for every request — for testing any connector's HttpClient.</summary>
 public sealed class StubHttpMessageHandler(HttpStatusCode statusCode, string body) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(

@@ -49,7 +49,6 @@ public partial class MoneyTests
         Assert.Equal(new Money(0.3m, "EUR"), new Money(0.1m, "EUR") + new Money(0.2m, "EUR"));
     }
 
-    // Mixing currencies is a bug or a missing explicit FX step, never something to guess through.
     [Fact]
     public void Adding_different_currencies_throws()
     {
@@ -57,7 +56,6 @@ public partial class MoneyTests
         Assert.Throws<CurrencyMismatchException>(() => new Money(10m, "CZK") - new Money(10m, "EUR"));
     }
 
-    // Rounding to minor units is a display concern, done at the edge — never in arithmetic.
     [Fact]
     public void Arithmetic_keeps_full_precision_no_rounding()
     {

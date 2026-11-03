@@ -9,17 +9,13 @@ type Props = {
 }
 
 export function ConnectionsPage({ data, onDataChange }: Props) {
-  // One card per stored connection, joined at render time to the sync result of
-  // the same source. Same derived-view idea as positions.
   const cards = data.connections.map((connection) => ({
     connection,
     result: data.syncResults.find((r) => r.source === connection.source),
   }))
 
   const handleSynced = (result: ConnectorSyncResult, credential: string) => {
-    // Re-syncing a source replaces its results and its stored connection
-    // (matched by source + account), never duplicates them. The connection
-    // reaches the vault only here — i.e. only after a successful sync.
+    // The only place a credential is saved: after a successful sync (ADR-0009).
     onDataChange({
       syncResults: [...data.syncResults.filter((r) => r.source !== result.source), result],
       connections: [
@@ -32,8 +28,6 @@ export function ConnectionsPage({ data, onDataChange }: Props) {
   }
 
   const handleRemove = (connection: Connection) => {
-    // Martin's decision (2026-09-16): removing a connection also drops its holdings,
-    // so nothing stale lingers with no way to refresh it. No undo → confirm first.
     if (!window.confirm(`Remove this connection? Its holdings disappear from the dashboard.`)) {
       return
     }

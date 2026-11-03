@@ -1,10 +1,8 @@
 import type { ConnectorSyncResult, SyncStatus } from '../../lib/api'
 import type { Connection } from '../../lib/vault'
 
-// Display names for source ids; unknown ids fall back to the raw id.
 const sourceNames: Record<string, string> = { fio: 'Fio banka' }
 
-// One label + css class per outcome. `undefined` = connection saved but no result yet.
 const statusChips: Record<SyncStatus, { label: string; className: string }> = {
   Ok: { label: '✓ OK', className: 'chip chip-ok' },
   InvalidCredential: { label: '✕ Invalid credential', className: 'chip chip-err' },
@@ -14,7 +12,6 @@ const statusChips: Record<SyncStatus, { label: string; className: string }> = {
 
 type Props = {
   connection: Connection
-  // The sync result for the same source, if any. Joined by the parent at render time.
   result?: ConnectorSyncResult
   onRemove: () => void
 }

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace PortfolioTrackerApp.Connectors.Tests.LoggingTests;
 
-/// <summary>Records every log line from every category so tests can assert what was — and wasn't — logged.</summary>
 public sealed class CapturingLoggerProvider : ILoggerProvider
 {
     public ConcurrentQueue<(string Category, LogLevel Level, string Message)> Lines { get; } = new();
@@ -18,8 +17,7 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
-            // Mirror what the console logger prints: message PLUS the exception (type, message, stack).
-            // An exception message can carry data the message template never would.
+            // Include the exception like the console logger does: its message can leak data.
             lines.Enqueue((category, logLevel, exception is null
                 ? formatter(state, exception)
                 : formatter(state, exception) + Environment.NewLine + exception));

@@ -37,7 +37,6 @@ jobs:
     needs: [backend, client]
     # PAUSED: remove "false && " to re-enable deploys.
     if: false && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    # Only one deploy at a time; later pushes queue rather than racing this one.
     # Never cancel: a half-applied Bicep deployment is worse than a short wait.
     concurrency:
       group: deploy-production
@@ -57,6 +56,5 @@ jobs:
       - run: az acr login -n acrportfoliotrackerapp
       - run: docker build -t $IMAGE .
       - run: docker push $IMAGE
-      # Unique name per run: ARM refuses to overwrite a deployment that is still active,
-      # and run_id stays unique even when the same commit is re-run.
+      # run_id, not sha: ARM refuses to overwrite an active deployment, and re-runs reuse the sha.
       - run: az deployment group create -g rg-portfoliotracker --name deploy-${{ github.run_id }} --template-file infra/main.bicep --parameters image=$IMAGE

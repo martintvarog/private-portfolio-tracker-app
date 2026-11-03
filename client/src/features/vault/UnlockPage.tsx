@@ -20,7 +20,6 @@ export function UnlockPage({ mode, onUnlocked }: Props) {
       const vault = mode === 'create' ? await createVault(passphrase) : await unlockVault(passphrase)
       onUnlocked(vault)
     } catch {
-      // GCM's failed tag check lands here — the only way to be wrong is the passphrase.
       setError(mode === 'create' ? 'Could not create the vault.' : 'Wrong passphrase.')
     } finally {
       setPending(false)

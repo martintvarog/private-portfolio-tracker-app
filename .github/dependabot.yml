@@ -1,18 +1,15 @@
-# Dependabot: opens PRs when dependencies have updates. Nothing merges by itself;
-# CI (backend + client jobs) runs on each PR, so a breaking bump shows up red.
 version: 2
 updates:
-  # .NET packages (all csproj files under the repo root)
   - package-ecosystem: nuget
     directory: /
     schedule:
       interval: weekly
       day: monday
     groups:
-      dotnet: # one PR per week for all NuGet bumps instead of one PR per package
+      dotnet:
         patterns: ["*"]
     ignore:
-      # Runtime-tied packages follow the TargetFramework; they move when .NET moves (by hand).
+      # Runtime-tied: they move with .NET, by hand.
       - dependency-name: "Microsoft.AspNetCore.*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Extensions.*"
@@ -21,7 +18,6 @@ updates:
       - dependency-name: "Microsoft.OpenApi"
         update-types: ["version-update:semver-major"]
 
-  # npm packages for the client
   - package-ecosystem: npm
     directory: /client
     schedule:
@@ -31,24 +27,20 @@ updates:
       npm-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
-      # majors stay separate: they are the ones that break things and deserve their own PR
 
-  # GitHub Actions used in .github/workflows (actions/checkout, azure/login, ...)
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
 
-  # Base images in the Dockerfile (node:22-alpine, dotnet/sdk:10.0, dotnet/aspnet:10.0)
-  # Runtime MAJORS (.NET 10 → 11, Node 22 → 24) are done by hand — Martin's call, 2026-09-15:
-  # a green CI on a base-image swap proves compilation, not runtime behaviour.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
       day: monday
     ignore:
+      # Runtime majors by hand: green CI on a base-image swap proves compilation, not runtime behaviour.
       - dependency-name: "mcr.microsoft.com/dotnet/*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "node"

@@ -1,29 +1,27 @@
 namespace PortfolioTrackerApp.Connectors.Contracts;
 
 /// <summary>
-/// Outcome of one connector sync. Always usable: on failure, <see cref="Status"/>
-/// says why and <see cref="Positions"/> is empty — one dead connector must never
-/// poison the others' results. Contains personal data (account label, positions):
-/// transits to the client vault, is never persisted or logged server-side.
+/// Result of one sync. On failure <see cref="Status"/> says why and <see cref="Positions"/> is empty.
+/// Personal data: passes through to the client, never stored or logged server-side (ADR-0011).
 /// </summary>
 public sealed record ConnectorSyncResult
 {
-    /// <summary>Which connector produced this, e.g. "fio".</summary>
+    /// <summary>Id of the connector that produced the result, e.g. "fio".</summary>
     public required string Source { get; init; }
 
+    /// <summary>Outcome of the sync; anything but Ok means no positions, e.g. Ok or InvalidCredential.</summary>
     public required SyncStatus Status { get; init; }
 
-    /// <summary>Distinguishes accounts when a user has several credentials for one
-    /// institution (Fio: one token per account), e.g. a masked account number.</summary>
+    /// <summary>How the source names the account, telling accounts at one source apart. Null on failure, e.g. "CZ7920100000002400222222" (Fio: IBAN).</summary>
     public string? AccountLabel { get; init; }
 
-    /// <summary>Moment the institution reported the positions as valid.</summary>
+    /// <summary>Moment the source reported the positions. Null on failure, e.g. 2026-11-03T10:15:00+00:00.</summary>
     public DateTimeOffset? AsOf { get; init; }
 
+    /// <summary>Current positions at the source; empty on failure, e.g. one CZK cash position for a Fio account.</summary>
     public IReadOnlyList<SyncedPosition> Positions { get; init; } = [];
 
-    /// <summary>"Skip loudly": anything excluded or odd is reported here, never dropped
-    /// silently — the number shown to the user must be honest about its gaps.</summary>
+    /// <summary>Everything skipped or odd during the sync, as user-readable text; never dropped silently, e.g. "Skipped unsupported instrument XS0123456789".</summary>
     public IReadOnlyList<string> Warnings { get; init; } = [];
 
     public static ConnectorSyncResult Failed(string source, SyncStatus status) =>

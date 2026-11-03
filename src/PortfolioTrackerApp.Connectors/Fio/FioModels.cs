@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace PortfolioTrackerApp.Connectors.Fio;
 
-// Fio's wire shapes, quarantined here — only the fields we read. Never leaks past this folder.
 internal sealed record FioExport(
     [property: JsonPropertyName("accountStatement")] FioAccountStatement? AccountStatement);
 

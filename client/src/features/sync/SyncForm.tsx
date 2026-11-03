@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { postSync, SyncError, type ConnectorSyncResult } from '../../lib/api'
 
-// Connector outcomes are data, not exceptions (ADR-0005) — each gets a message.
 const statusMessages: Record<string, string> = {
   InvalidCredential:
     'The institution rejected this credential — it may have expired. Generate a new one and try again.',
@@ -12,15 +11,11 @@ const statusMessages: Record<string, string> = {
 
 type Props = {
   onSynced: (result: ConnectorSyncResult, credential: string) => void
-  // Prefilled from the vault when this source synced successfully before.
   initialCredential?: string
 }
 
 export function SyncForm({ onSynced, initialCredential }: Props) {
-  // useState's argument is only the INITIAL value (used on mount) — later
-  // changes to initialCredential don't overwrite what the user typed.
   const [credential, setCredential] = useState(initialCredential ?? '')
-  // 'copied' is transient UI state: flips true on click, back to false after 1.5 s.
   const [copied, setCopied] = useState(false)
 
   const sync = useMutation({
@@ -30,11 +25,8 @@ export function SyncForm({ onSynced, initialCredential }: Props) {
     },
   })
 
-  // sync.data is now { result, requestId }; the wire result is one level down.
   const result = sync.data?.result
   const outcome = result && result.status !== 'Ok' ? statusMessages[result.status] : null
-  // Shown only when something went wrong: lets the user quote a reference that
-  // points at exactly their request in the server logs — and nothing else.
   const failureRef = sync.isError
     ? sync.error instanceof SyncError
       ? sync.error.requestId
@@ -49,7 +41,7 @@ export function SyncForm({ onSynced, initialCredential }: Props) {
       <form
         className="sync-form"
         onSubmit={(event) => {
-          event.preventDefault() // stop the browser's full-page form submit
+          event.preventDefault()
           sync.mutate()
         }}
       >

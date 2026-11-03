@@ -1,9 +1,8 @@
 namespace PortfolioTrackerApp.Domain.Monetary.Currency;
 
 /// <summary>
-/// Thrown when amounts in different currencies are combined without an explicit
-/// exchange rate. Silent coercion is how trackers lie; mixing currencies is always
-/// a bug or a missing FX-conversion step, never something to guess through.
+/// Amounts in different currencies were combined without an exchange rate. Always a bug or a
+/// missing FX step; the domain never converts silently.
 /// </summary>
 public sealed class CurrencyMismatchException : InvalidOperationException
 {

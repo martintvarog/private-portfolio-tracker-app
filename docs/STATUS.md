@@ -3,7 +3,8 @@
 > Audience: an LLM session picking up this repo. Dense on purpose; not for humans.
 > Scope: facts derived ONLY from `repository/` (code, config, docs, git log).
 > Last full sweep: 2026-10-09 (HEAD `0c5a586`). Update when a work block completes.
-> Last update: 2026-11-03 — Domain + FioConnector tests review; committed on `main` (not pushed).
+> Last update: 2026-11-03 — comment cleanup (rules in root `CLAUDE.md` "Code Comments":
+> Domain + contract property summaries with examples); committed and pushed on `main`.
 > Paths below are relative to `repository/` unless stated.
 
 ## 0. Who / how
@@ -11,8 +12,8 @@
 - Collaboration rules live in root `CLAUDE.md` (decision / learning / autopilot modes) —
   not duplicated here.
 - Martin: senior-track .NET, junior FE, NEW to infra/DevOps.
-- Code comments mark Martin's decisions ("Martin's decision 2026-09-16") — treat them as
-  decided; don't silently change them.
+- Martin's decisions live in ADRs and §12, not in code comments (comment rules: root
+  `CLAUDE.md` "Code Comments", 2026-11-03). Source facts: `docs/integrations/`.
 - Domain terms: `docs/glossary.md` (agreed 2026-10-21) — one name per concept in code, UI,
   diagrams. Use it when naming anything; key split: **Position** (per source, all code) vs
   **Holding** (planned client aggregate; UI says "Holdings" for positions until then).
@@ -40,7 +41,8 @@ infra/main.bicep, infra/rbac.bicep
 src/  Api | Connectors | Domain | MarketData
 tests/ Api.Tests | Connectors.Tests | Domain.Tests
 client/ React+Vite+TS
-docs/ STATUS.md, glossary.md, observability.md, runbook.md, adr/0000–0011, uml/
+docs/ STATUS.md, glossary.md, observability.md, runbook.md, adr/0000–0011, uml/,
+      integrations/ (README = connector laws, fio.md = Fio facts + status mapping)
 README.md               architecture overview (deploy section stale — see §9)
 ```
 Untracked (as of 2026-10-21): `docs/uml/02-manual-asset-classes.puml`,
@@ -54,20 +56,20 @@ Dependency rule: `Api → Connectors|MarketData → Domain`. `Api` has NO Domain
 sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile error by design.
 
 ### Api (`PortfolioTrackerApp.Api`)
-- `Program.cs` pipeline order (matters, ADR-0011):
-  `UseHttpLogging` (outermost) → inline middleware setting `X-Request-Id` =
-  `TraceIdentifier` via `Response.OnStarting` (survives exception handler's
+- `Program.cs` pipeline order (matters, ADR-0011, test-guarded):
+  `UseHttpLogging` (outermost) → `UseRequestIdHeader()` (`X-Request-Id` =
+  `TraceIdentifier` via `Response.OnStarting`, survives exception handler's
   `Response.Clear()`) → `UseExceptionHandler` (+`AddProblemDetails`) → OpenAPI (Dev only)
-  → `GET /health` → `UseDefaultFiles` + `UseStaticFiles(spaFiles)` →
-  `MapFallbackToFile("index.html", spaFiles)` → `MapGroup("/api").MapSyncEndpoints()`.
-- `spaFiles` cache policy: `index.html` → `no-cache`; everything else →
-  `public, max-age=31536000, immutable`. Same options passed to fallback (ADR-0006 amend).
+  → `GET /health` → `MapSpa()` → `MapGroup("/api").MapSyncEndpoints()`.
+- `Hosting/ObservabilityExtensions`: `AddLogSafeHttpLogging()`, `UseRequestIdHeader()`.
+  `Hosting/SpaExtensions.MapSpa()`: `UseDefaultFiles` + `UseStaticFiles` +
+  `MapFallbackToFile("index.html")`, one cache policy for both: `index.html` → `no-cache`;
+  everything else → `public, max-age=31536000, immutable` (ADR-0006 amend).
 - Global `JsonStringEnumConverter` (ADR-0010).
 - HttpLogging fields allow-list: RequestMethod|RequestPath|ResponseStatusCode|Duration,
   `CombineLogs=true`. NEVER add bodies/headers (sync body = credential, response = IBAN).
-- `// builder.Services.AddMarketDataModule(builder.Configuration);` — commented out.
 - `public partial class Program;` for `WebApplicationFactory`.
-- `Sync/SyncEndpoints.cs`: `POST /api/sync` body `SyncRequest(Source?, Credential?)`.
+- `Sync/SyncEndpoints.cs`: `POST /api/sync` (named handler `Sync`) body `SyncRequest(Source?, Credential?)`.
   400 ProblemDetails for missing source / missing credential / unknown source; else
   resolve `IEnumerable<IConnector>` by `SourceId` (case-insensitive) → 200 `ConnectorSyncResult`.
 - `appsettings.json`: JSON console formatter, `IncludeScopes`, UTC ISO timestamps,
@@ -79,17 +81,18 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   see dependabot ignore).
 
 ### Connectors (`PortfolioTrackerApp.Connectors`)
-- `Contracts/IConnector`: `SourceId`, `FetchPositionsAsync(credential, ct)`. Laws (doc
-  comment): outcomes are data, never thrown; idempotent (Fio uses `periods`, never
-  `last`); source-tagged; credentials never persisted/logged incl. URLs and EXCEPTION
-  MESSAGES; unsupported instruments → `Warnings` (skip loudly).
+- `Contracts/IConnector`: `SourceId`, `FetchPositionsAsync(credential, ct)`. Laws live in
+  `docs/integrations/README.md`: outcomes are data, never thrown; idempotent; source-tagged;
+  credentials never persisted/logged incl. URLs and EXCEPTION MESSAGES; skip loudly via
+  `Warnings`; no logging inside connectors.
 - `ConnectorSyncResult` record: Source, Status, AccountLabel?, AsOf?, Positions[], Warnings[];
   `Failed(source, status)` factory.
 - `SyncStatus` enum: Ok=1, InvalidCredential=2, Unavailable=3, RateLimited=4 (no 0 on purpose).
 - `SyncedPosition`: AssetType ("cash"|"security"|"crypto"|"other"), Symbol, Quantity, Currency, Name?, Isin?.
 - `Fio/FioConnector` (internal): GET
   `v1/rest/periods/{token}/{today}/{today}/transactions.json` on `https://fioapi.fio.cz/`,
-  timeout 30 s. Maps: HTTP 500 → InvalidCredential (Fio spec!), 409 → RateLimited,
+  timeout 30 s. Maps (named consts `InvalidOrInactiveToken`, `TokenRateLimited`):
+  HTTP 500 → InvalidCredential (Fio spec!), 409 → RateLimited,
   other non-2xx / HttpRequestException / timeout / bad JSON / domain ArgumentException →
   Unavailable. Caller cancellation propagates. Ok → one cash position from
   `accountStatement.info.closingBalance`+`currency`, AccountLabel = IBAN. Promotes through
@@ -138,8 +141,7 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   `{id:'vault', version:1, salt, iv, ciphertext}`.
 - `lib/vault.ts`: `VaultData = { syncResults: ConnectorSyncResult[]; connections: Connection[] }`;
   `Connection = {source, credential, accountLabel?}`; `createVault`, `unlockVault`,
-  `persistVault` (reuses salt, fresh IV), `vaultExists`. Stale "TODO (Martin)" comments
-  remain above already-implemented `unlockVault`/`persistVault`.
+  `persistVault` (reuses salt, fresh IV), `vaultExists`.
   Vault format changed 2026-10-21 (`credentials`→`connections`, `holdings`→`positions`,
   `kind`→`assetType`), version still 1, NO migration (Martin: no deployed app) → a vault
   created before that must be deleted (DevTools → IndexedDB `portfolio-tracker`).
@@ -156,7 +158,7 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   display text). UI heading stays "Holdings" (glossary).
 - `features/connections/ConnectionsPage.tsx`: one `ConnectionCard` per stored connection,
   joined at render to `syncResults` by `source`; Remove = `window.confirm` → drops the
-  connection AND all syncResults of that source (Martin, 2026-09-16). Hosts `SyncForm`
+  connection AND all syncResults of that source (ADR-0009 amend). Hosts `SyncForm`
   with `initialCredential` = the first fio connection's credential.
 - `features/connections/ConnectionCard.tsx`: status chip per `SyncStatus`, account label,
   last sync (cs-CZ), warnings, Remove button. `sourceNames = {fio: 'Fio banka'}`.
@@ -171,10 +173,10 @@ sets `DisableTransitiveProjectReferences=true` → `Api → Domain` is a compile
   + `dotnet test`, run in the `mcr.microsoft.com/dotnet/sdk:10.0` container — see §14);
   production Docker image built and smoke-tested the same day.
 - Stack: xUnit 2.9.3, Microsoft.NET.Test.Sdk 18.10.1, coverlet, Mvc.Testing 10.0.12. No mocking lib.
-- 2026-11-03 (local `dotnet test` on a scratch copy): Domain 34, Connectors 21 green; Api 8
-  unchanged since.
-- Domain.Tests (Martin, 2026-11-03: only important business rules, comments only where they
-  state a rule's why; `TheoryData`+`[MemberData]` for decimal cases):
+- 2026-11-03 after the comment cleanup: 63 green (Domain 34, Connectors 21, Api 8), Release
+  build 0 errors, in the SDK container (§14). Client `npm run build` + `npm run lint` clean.
+- Domain.Tests (Martin, 2026-11-03: only important business rules; no comments, the rule's
+  why lives in the Domain type summary; `TheoryData`+`[MemberData]` for decimal cases):
   `AssetTests` (minimal asset: Name→Symbol, Isin null; invalid/empty quote currency; empty
   symbol; `Asset.Cash`), `MoneyTests.cs` partial base (construction, equality, currency
   shape+upper-case, culture-independent `ToString`), `MoneyTests.Operators.cs` (+ − × both
@@ -281,7 +283,7 @@ X-Request-Id amendment). New ADRs follow `0000-adr-template.md`.
    README Conventions cites `docs/adr/template.md` (actual: `0000-adr-template.md`).
 4. ADR-0004 lists `docker-compose.yml` as repo infra — file does not exist (planned to
    return with Postgres).
-5. `vault.ts` stale TODO comments; `index.html` title `client`; Dev appsettings lacks
+5. `index.html` title `client`; Dev appsettings lacks
    HttpLogging override.
 6. Fio: 1 request/token/30 s; a second sync inside the window stalls until the 30 s
    HttpClient timeout → `Unavailable` (should arguably be RateLimited). Unknown tokens

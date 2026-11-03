@@ -25,3 +25,5 @@ The product's defining property is "the operator can't see your data": credentia
 ## Consequences
 
 Server holds nothing; a database dump of the browser shows one opaque record. **Risk:** losing the passphrase loses the vault permanently — by design, there is no recovery, and the UI must say so clearly. Every save re-encrypts the whole document (fine at this data volume; revisit if the vault grows large). Because the dashboard is a pure function of the vault, stale-but-honest data is shown until the next sync lands. Rejected: plaintext `localStorage` (readable by any script on the origin, defeats the pitch); per-field encryption (leaks structure and counts).
+
+Amended 2026-11-03 (recording a decision of 2026-09-16, previously only a code comment): removing a connection also drops its sync results, after a `window.confirm`, with no undo. **Why:** results of a removed connection could never be refreshed, so keeping them would show stale data forever. **Risk:** an accidental confirm loses those holdings until the user reconnects and syncs again.

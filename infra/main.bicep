@@ -1,10 +1,5 @@
-// Infrastructure for the portfolio tracker — everything in rg-portfoliotracker.
-// Dry run:  az deployment group what-if -g rg-portfoliotracker --template-file infra/main.bicep
-// Deploy:   az deployment group create  -g rg-portfoliotracker --template-file infra/main.bicep
-
 param location string = resourceGroup().location
 
-// ---------- Container registry: where the pipeline pushes images, where the app pulls them ----------
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: 'acrportfoliotrackerapp'
   location: location
@@ -13,20 +8,17 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   }
 }
 
-// ---------- Log Analytics workspace: where container logs end up ----------
-// Azure created this silently on Monday when the Container Apps environment was made.
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'workspace-rgportfoliotrackerk171'
+  name: 'workspace-rgportfoliotrackerk171' // name Azure auto-generated; renaming would replace the workspace and its logs
   location: location
   properties: {
     sku: {
-      name: 'PerGB2018' // pay per GB ingested; first 5 GB/month free
+      name: 'PerGB2018'
     }
     retentionInDays: 30
   }
 }
 
-// ---------- Container Apps environment: the shared boundary (network + logs) apps live in ----------
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: 'cae-portfoliotracker'
   location: location
@@ -34,20 +26,19 @@ resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: logAnalytics.properties.customerId        // read from the workspace above
-        sharedKey: logAnalytics.listKeys().primarySharedKey   // fetched at deploy time, never stored in the file
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
       }
     }
     workloadProfiles: [
       {
         name: 'Consumption'
-        workloadProfileType: 'Consumption'   // serverless: pay per second of use, scales to zero
+        workloadProfileType: 'Consumption'
       }
     ]
   }
 }
 
-// ---------- The app itself ----------
 @description('Full image reference to run. CD will pass the SHA-tagged image; this default is the current one.')
 param image string = 'acrportfoliotrackerapp.azurecr.io/portfoliotrackerapp:daef300edd21c8f2fecc663b2b5b804c12d72fa4'
 
@@ -55,22 +46,22 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'ca-portfoliotracker'
   location: location
   identity: {
-    type: 'SystemAssigned' // the app gets its own Azure identity, used to pull from the registry
+    type: 'SystemAssigned'
   }
   properties: {
-    managedEnvironmentId: env.id       // lives inside the environment above
+    managedEnvironmentId: env.id
     workloadProfileName: 'Consumption'
     configuration: {
-      activeRevisionsMode: 'Single'    // new version replaces old at 100%, once healthy
+      activeRevisionsMode: 'Single'
       ingress: {
-        external: true                 // public URL
-        targetPort: 8080               // where the container listens (ASPNETCORE_HTTP_PORTS)
+        external: true
+        targetPort: 8080
         transport: 'Auto'
       }
       registries: [
         {
-          server: acr.properties.loginServer   // acrportfoliotrackerapp.azurecr.io
-          identity: 'system'                   // pull with the app's own identity — no password
+          server: acr.properties.loginServer
+          identity: 'system'
         }
       ]
     }
@@ -80,21 +71,19 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'ca-portfoliotracker'
           image: image
           resources: {
-            cpu: json('0.5')   // Bicep has no decimal literals; json() yields a number
+            cpu: json('0.5') // Bicep has no decimal literals
             memory: '1Gi'
           }
         }
       ]
       scale: {
-        minReplicas: 0   // scale to zero when idle
+        minReplicas: 0
         maxReplicas: 1
       }
     }
   }
 }
 
-
-// ---------- CI/CD identity: who GitHub Actions is when it talks to Azure ----------
 @description('OIDC subject GitHub presents for pushes to main. Includes the numeric owner/repo IDs.')
 param githubSubject string = 'repo:martintvarog@63610399/private-portfolio-tracker-app@1329731821:ref:refs/heads/main'
 
@@ -103,7 +92,6 @@ resource deployIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-0
   location: location
 }
 
-// Trust rule (authentication): a GitHub-signed token for exactly this repo+branch IS this identity.
 resource githubFederation 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
   parent: deployIdentity
   name: 'github-main'
@@ -114,24 +102,19 @@ resource githubFederation 'Microsoft.ManagedIdentity/userAssignedIdentities/fede
   }
 }
 
-// Role assignments live in rbac.bicep — deployed by a human, never by the pipeline.
-
-// ---------- Alert: bank outage (many Unavailable syncs), not one user's dead token ----------
 @description('Fire when more than this many syncs end Unavailable within the 15-minute window. 5 = more than casual retrying by one user; revisit when it fires falsely or stays silent during a real Fio outage.')
 param unavailableAlertThreshold int = 5
 
-// No action group on purpose (Martin, 2026-09-15): visible in Portal → Monitor → Alerts only.
-// Adding email/SMS later = an actionGroups resource + `actions: { actionGroups: [ag.id] }` below.
 resource syncUnavailableAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = {
   name: 'alert-sync-unavailable'
   location: location
   properties: {
     displayName: 'Sync outcomes: Unavailable spike (bank outage?)'
     description: 'More than ${unavailableAlertThreshold} syncs ended Unavailable in 15 min. InvalidCredential is excluded on purpose: one expired token is not an incident.'
-    severity: 2 // Warning
+    severity: 2
     enabled: true
-    evaluationFrequency: 'PT5M' // run the query every 5 minutes...
-    windowSize: 'PT15M'         // ...over the last 15 minutes
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
     scopes: [ logAnalytics.id ]
     criteria: {
       allOf: [
@@ -152,10 +135,9 @@ ContainerAppConsoleLogs_CL
         }
       ]
     }
-    autoMitigate: true // resolves itself once the count is back under the threshold
+    autoMitigate: true
   }
 }
 
-// ---------- Outputs: values the outside world needs after a deploy ----------
 output appUrl string = 'https://${app.properties.configuration.ingress.fqdn}'
 output deployClientId string = deployIdentity.properties.clientId

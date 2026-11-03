@@ -7,14 +7,11 @@ using PortfolioTrackerApp.Domain.Monetary;
 
 namespace PortfolioTrackerApp.Connectors.Fio;
 
-/// <summary>
-/// Fio banka: personal API token, one token = one account. Balance is read from the
-/// `periods` export header (idempotent; `last` would move a server-side bookmark).
-/// The token travels in the URL path — no code in this class may log the request URI.
-/// </summary>
 internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvider) : IConnector
 {
     private const string Source = "fio";
+    private const HttpStatusCode InvalidOrInactiveToken = HttpStatusCode.InternalServerError;
+    private const HttpStatusCode TokenRateLimited = HttpStatusCode.Conflict;
 
     public string SourceId => Source;
 
@@ -24,7 +21,6 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
         if (token.Length == 0)
             return ConnectorSyncResult.Failed(Source, SyncStatus.InvalidCredential);
 
-        // Balance-only sync: a 1-day window is enough, closingBalance always comes in `info`.
         var today = timeProvider.GetUtcNow().UtcDateTime;
         var url = $"v1/rest/periods/{token}/{today:yyyy-MM-dd}/{today:yyyy-MM-dd}/transactions.json";
 
@@ -39,8 +35,6 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            // HttpClient.Timeout elapsed — the bank didn't answer. A cancelled caller
-            // token is not a bank problem, so that case is deliberately let through.
             return ConnectorSyncResult.Failed(Source, SyncStatus.Unavailable);
         }
 
@@ -53,8 +47,6 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
             var info = export?.AccountStatement?.Info
                 ?? throw new JsonException("Missing accountStatement.info.");
 
-            // Promote into the domain: constructors enforce the invariants (currency shape,
-            // amount/currency coupling). Nonsense from the bank throws here, at the boundary.
             var balance = new Money(info.ClosingBalance, info.Currency ?? "");
             var position = Position.OfCash(balance, Source, timeProvider.GetUtcNow());
 
@@ -78,16 +70,14 @@ internal sealed class FioConnector(HttpClient httpClient, TimeProvider timeProvi
         }
         catch (Exception ex) when (ex is JsonException or ArgumentException)
         {
-            // Bank sent data we can't trust — per design decision, same user value as an outage.
             return ConnectorSyncResult.Failed(Source, SyncStatus.Unavailable);
         }
     }
 
     private static SyncStatus MapStatus(HttpStatusCode statusCode) => statusCode switch
     {
-        // Fio's documented semantics (spec section 8): 500 = invalid/inactive token(!), 409 = rate limit.
-        HttpStatusCode.InternalServerError => SyncStatus.InvalidCredential,
-        HttpStatusCode.Conflict => SyncStatus.RateLimited,
+        InvalidOrInactiveToken => SyncStatus.InvalidCredential,
+        TokenRateLimited => SyncStatus.RateLimited,
         _ => SyncStatus.Unavailable,
     };
 }

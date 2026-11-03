@@ -4,15 +4,16 @@ using PortfolioTrackerApp.Domain.Monetary.Currency;
 namespace PortfolioTrackerApp.Domain.Monetary;
 
 /// <summary>
-/// An exact amount bound to a currency. Value object: immutable, equal by contents.
-/// Invariants: amount is decimal (never binary floating point); currency is a
-/// normalized ISO-4217-shaped code; arithmetic never crosses currencies and never
-/// rounds — rounding is a presentation/allocation concern, not an arithmetic one.
-/// Negative amounts are legal (liabilities exist).
+/// An exact amount in one currency. Value object. Invariants: currency is a valid, upper-cased
+/// currency code; arithmetic never mixes currencies and never rounds (rounding belongs to
+/// display); negative amounts are legal (liabilities).
 /// </summary>
 public sealed record Money
 {
+    /// <summary>Exact amount; negative for liabilities, e.g. 1250.50 or -300.</summary>
     public decimal Amount { get; }
+
+    /// <summary>Upper-cased 3-letter currency code, e.g. "CZK".</summary>
     public string Currency { get; }
 
     public Money(decimal amount, string currency)

@@ -1,9 +1,8 @@
 namespace PortfolioTrackerApp.Domain.Monetary.Currency;
 
 /// <summary>
-/// Shared validation for ISO-4217 currency codes ("CZK", "EUR").
-/// Structural check only (3 ASCII letters) — we deliberately don't maintain the
-/// real ISO list; unknown-but-well-formed codes must work (e.g. crypto tickers later).
+/// Currency code rule: 3 ASCII letters, trimmed and upper-cased. Checks the shape only, not
+/// the ISO-4217 list, so unknown but well-formed codes are accepted.
 /// </summary>
 internal static class CurrencyCode
 {

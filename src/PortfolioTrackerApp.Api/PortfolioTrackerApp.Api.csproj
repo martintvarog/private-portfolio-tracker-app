@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Api must not compile against Domain, not even via Connectors/MarketData. -->
+    <!-- Keeps Domain out of Api, even transitively (ADR-0003). -->
     <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
   </PropertyGroup>
 
@@ -14,8 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- No Domain reference on purpose: module contracts own their result types,
-         so the domain model stays a private implementation detail of the modules. -->
     <ProjectReference Include="..\PortfolioTrackerApp.Connectors\PortfolioTrackerApp.Connectors.csproj" />
     <ProjectReference Include="..\PortfolioTrackerApp.MarketData\PortfolioTrackerApp.MarketData.csproj" />
   </ItemGroup>

@@ -116,7 +116,6 @@ public class FioConnectorTests
         Assert.Equal(SyncStatus.Unavailable, result.Status);
     }
 
-    // A cancelled caller is not a bank problem: it must not be reported as Unavailable.
     [Fact]
     public async Task Caller_cancellation_propagates_instead_of_becoming_a_status()
     {

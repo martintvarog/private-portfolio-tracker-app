@@ -9,8 +9,6 @@ type Props = {
   onDataChange: (data: VaultData) => void
 }
 
-// Wire → view mapping. CZK cash is valued 1:1; everything else needs
-// MarketData prices/FX (step: valuation) and stays unvalued for now.
 function toPositions(result: ConnectorSyncResult): Position[] {
   const asOf = result.asOf ? new Date(result.asOf).toLocaleString('cs-CZ') : 'just now'
   const connectionLabel = result.accountLabel
@@ -29,11 +27,7 @@ function toPositions(result: ConnectorSyncResult): Position[] {
   }))
 }
 
-// onDataChange is not used yet — syncing moved to the Connections page. The prop
-// stays because upcoming dashboard cards (snapshots, display currency) will write.
 export function DashboardPage({ data }: Props) {
-  // No positions state here anymore: the vault's raw syncResults are the facts,
-  // everything below is derived fresh on every render.
   const positions = data.syncResults.flatMap(toPositions)
 
   const valued = positions.filter((p) => p.displayValue !== undefined)

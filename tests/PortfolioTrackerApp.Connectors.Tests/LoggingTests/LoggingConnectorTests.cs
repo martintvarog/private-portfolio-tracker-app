@@ -38,8 +38,8 @@ public class LoggingConnectorTests
 
         var result = await sut.FetchPositionsAsync(Credential, CancellationToken.None);
 
-        Assert.Equal(Credential, fake.SeenCredential); // decorator passes the credential through untouched
-        Assert.Same(inner, result);                     // and returns the inner result as-is
+        Assert.Equal(Credential, fake.SeenCredential);
+        Assert.Same(inner, result);                    
         return (result, logs);
     }
 
@@ -76,7 +76,7 @@ public class LoggingConnectorTests
         var line = Assert.Single(logs.Lines);
         Assert.DoesNotContain(Credential, line.Message);
         Assert.DoesNotContain(Iban, line.Message);
-        Assert.DoesNotContain("195", line.Message);   // balance
-        Assert.DoesNotContain("CZK", line.Message);   // position detail
+        Assert.DoesNotContain("195", line.Message);  
+        Assert.DoesNotContain("CZK", line.Message);  
     }
 }

@@ -6,8 +6,6 @@ type Props = {
   positions: Position[]
 }
 
-// Lists positions (one row per source); the UI calls them "Holdings" until the
-// aggregated Holding exists (docs/glossary.md).
 export function PositionsTable({ positions }: Props) {
   return (
     <div className="card">

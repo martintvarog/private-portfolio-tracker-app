@@ -3,16 +3,10 @@ using PortfolioTrackerApp.Connectors.Contracts;
 
 namespace PortfolioTrackerApp.Connectors.Logging;
 
-/// <summary>
-/// Decorator: logs ONE outcome line per sync for any connector — source, status, duration.
-/// This is the only place connector activity is logged, so the "never log credentials,
-/// account labels, positions or URLs" law is enforced here, once, for every connector.
-/// </summary>
 internal sealed class LoggingConnector(IConnector inner, ILogger<LoggingConnector> logger, TimeProvider timeProvider) : IConnector
 {
     public string SourceId => inner.SourceId;
 
-    /// <summary>The wrapped connector's type — lets tests inspect the HttpClient registered for it.</summary>
     internal Type InnerType => inner.GetType();
 
     public async Task<ConnectorSyncResult> FetchPositionsAsync(string credential, CancellationToken cancellationToken)
@@ -21,8 +15,6 @@ internal sealed class LoggingConnector(IConnector inner, ILogger<LoggingConnecto
         var result = await inner.FetchPositionsAsync(credential, cancellationToken);
         var elapsedMs = (long)timeProvider.GetElapsedTime(started).TotalMilliseconds;
 
-        // Ok is routine (Information); anything else is worth noticing/alerting on (Warning).
-        // Structured placeholders → queryable fields; NO credential, label, positions or URL.
         var level = result.Status == SyncStatus.Ok ? LogLevel.Information : LogLevel.Warning;
         logger.Log(level, "Sync {Source} finished with {Status} in {ElapsedMs} ms",
             result.Source, result.Status, elapsedMs);

@@ -34,7 +34,6 @@ public partial class MoneyTests
         Assert.NotEqual(new Money(100m, "CZK"), new Money(100m, "EUR"));
     }
 
-    // Shape-only check (3 ASCII letters): unknown codes are fine, garbage is not.
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -57,7 +56,6 @@ public partial class MoneyTests
         { -1234.56m, "EUR", "-1234.56 EUR" },
     };
 
-    // Same text on every machine: a Czech culture must not turn "1.5" into "1,5".
     [Theory]
     [MemberData(nameof(Formatted))]
     public void ToString_is_culture_independent(decimal amount, string currency, string expected)

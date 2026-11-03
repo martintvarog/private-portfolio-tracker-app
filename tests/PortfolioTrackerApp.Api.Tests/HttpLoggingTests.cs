@@ -12,11 +12,6 @@ using PortfolioTrackerApp.Connectors.Logging;
 
 namespace PortfolioTrackerApp.Api.Tests;
 
-/// <summary>
-/// Hosts the real app in-process (real Program.cs, real appsettings.json) with the bank swapped for
-/// a fake, and captures every log line. Guards the inbound request log: method/path/status/duration
-/// are logged; the request body (credential) and response body (IBAN, balances) never are.
-/// </summary>
 public class HttpLoggingTests
 {
     private const string Credential = "SECRET-TOKEN-abc123";
@@ -35,7 +30,6 @@ public class HttpLoggingTests
             });
     }
 
-    /// <summary>A connector with a programming error. The message deliberately may or may not carry the credential.</summary>
     private sealed class ThrowingConnector(bool leakCredentialInMessage) : IConnector
     {
         public string SourceId => "fio";
@@ -43,8 +37,7 @@ public class HttpLoggingTests
             throw new InvalidOperationException(leakCredentialInMessage ? $"boom for {credential}" : "boom");
     }
 
-    // Production, like Azure: no developer exception page. (WebApplicationFactory defaults to Development.)
-    // wwwroot is build output (gitignored), so CI has none: give the test host its own web root with a stub index.html.
+    // wwwroot is gitignored build output, so CI has none.
     private static readonly string TestWebRoot = CreateTestWebRoot();
 
     private static string CreateTestWebRoot()
@@ -62,10 +55,9 @@ public class HttpLoggingTests
         {
             builder.UseEnvironment(environment);
             builder.UseWebRoot(TestWebRoot);
-            builder.ConfigureLogging(logging => logging.AddProvider(logs)); // appsettings filters still apply
+            builder.ConfigureLogging(logging => logging.AddProvider(logs));
             builder.ConfigureServices(services =>
             {
-                // Swap the bank for a fake, but keep the production shape: IConnector = LoggingConnector(inner).
                 services.RemoveAll<IConnector>();
                 services.AddTransient<IConnector>(sp => new LoggingConnector(
                     connector ?? new FakeConnector(),
@@ -106,10 +98,10 @@ public class HttpLoggingTests
         var (response, lines) = await PostSync();
 
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains(Iban, body); // the client DOES get the data...
+        Assert.Contains(Iban, body);
 
         Assert.NotEmpty(lines);
-        foreach (var (category, _, message) in lines) // ...the logs never do
+        foreach (var (category, _, message) in lines)
         {
             Assert.DoesNotContain(Credential, message);
             Assert.DoesNotContain(Iban, message);
@@ -140,33 +132,28 @@ public class HttpLoggingTests
     {
         var (response, lines) = await PostSync(new ThrowingConnector(leakCredentialInMessage: false));
 
-        // Client: a clean RFC 7807 500, no stack trace, no internals.
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         var body = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("boom", body);
         Assert.DoesNotContain("InvalidOperationException", body);
 
-        // Logs: the request log records the REAL status, and the crash is visible exactly once.
         var request = Assert.Single(lines, l => l.Category.StartsWith("Microsoft.AspNetCore.HttpLogging"));
         Assert.Contains("500", request.Message);
         var error = Assert.Single(lines, l => l.Level == LogLevel.Error);
         Assert.Contains("InvalidOperationException", error.Message);
         Assert.Contains("boom", error.Message);
 
-        // And the law still holds: the credential is nowhere.
         Assert.All(lines, l => Assert.DoesNotContain(Credential, l.Message));
     }
 
     [Fact]
     public async Task Control_a_credential_inside_an_exception_message_DOES_reach_the_logs()
     {
-        // Proves the IConnector law "never put the credential in an exception message" is not theoretical:
-        // the framework logs unhandled exceptions verbatim. Nothing in Program.cs can undo that.
         var (response, lines) = await PostSync(new ThrowingConnector(leakCredentialInMessage: true));
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.DoesNotContain(Credential, await response.Content.ReadAsStringAsync()); // the client still gets nothing
+        Assert.DoesNotContain(Credential, await response.Content.ReadAsStringAsync());
         var error = Assert.Single(lines, l => l.Level == LogLevel.Error);
         Assert.Contains(Credential, error.Message);
     }
@@ -179,8 +166,6 @@ public class HttpLoggingTests
         var requestId = Assert.Single(response.Headers.GetValues("X-Request-Id"));
         Assert.False(string.IsNullOrWhiteSpace(requestId));
 
-        // Same id on the request line (HttpLogging) and on the connector outcome line — the two lines
-        // a support question ("it failed at 14:32, ref 0HN7...") needs to pair up.
         var request = Assert.Single(lines, l => l.Category.StartsWith("Microsoft.AspNetCore.HttpLogging"));
         var outcome = Assert.Single(lines, l => l.Category.Contains("LoggingConnector"));
         Assert.Contains(requestId, request.Message);
@@ -195,7 +180,6 @@ public class HttpLoggingTests
         var requestId = Assert.Single(response.Headers.GetValues("X-Request-Id"));
         var error = Assert.Single(lines, l => l.Level == LogLevel.Error);
         Assert.Contains(requestId, error.Message);
-        // (ProblemDetails.traceId is the W3C Activity id — a different, also-logged id. Not asserted here.)
     }
 
     [Fact]
@@ -204,7 +188,6 @@ public class HttpLoggingTests
         var (app, _) = CreateApp();
         using var client = app.CreateClient();
 
-        // Both ways index.html is served — directly for "/" and via the SPA fallback for a client route.
         foreach (var path in new[] { "/", "/dashboard" })
         {
             var index = await client.GetAsync(path);

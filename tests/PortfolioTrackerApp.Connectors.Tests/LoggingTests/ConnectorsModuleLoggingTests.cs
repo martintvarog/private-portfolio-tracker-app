@@ -10,12 +10,6 @@ using PortfolioTrackerApp.Connectors.Logging;
 
 namespace PortfolioTrackerApp.Connectors.Tests.LoggingTests;
 
-/// <summary>
-/// Goes through the real DI wiring (AddConnectorsModule) with a stubbed Fio HTTP response and
-/// captures EVERY log line from EVERY category. Guards the two laws end to end:
-/// the outbound HttpClient pipeline is silent (no URL with the token), and the only
-/// connector log line is the decorator's outcome line.
-/// </summary>
 public class ConnectorsModuleLoggingTests
 {
     private const string Token = "SECRET-TOKEN-abc123";
@@ -30,9 +24,9 @@ public class ConnectorsModuleLoggingTests
     {
         var logs = new CapturingLoggerProvider();
         var services = new ServiceCollection();
-        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace).AddProvider(logs)); // capture everything, even Trace
+        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace).AddProvider(logs));
         services.AddConnectorsModule();
-        // Swap the network for a stub. The typed client is named after its type.
+        // A typed HttpClient is named after its type.
         services.AddHttpClient<FioConnector>()
             .ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(fioStatus, FioBody));
 
@@ -62,13 +56,13 @@ public class ConnectorsModuleLoggingTests
         var (result, lines) = await SyncViaModule(HttpStatusCode.OK);
 
         Assert.Equal(SyncStatus.Ok, result.Status);
-        Assert.Equal(Iban, result.AccountLabel); // the DATA still flows to the caller...
+        Assert.Equal(Iban, result.AccountLabel);
 
         var connectorLines = lines.Where(l => l.Category.StartsWith("PortfolioTrackerApp.")).ToList();
         var line = Assert.Single(connectorLines);
         Assert.Equal(LogLevel.Information, line.Level);
 
-        foreach (var (category, _, message) in lines) // ...but no log line, in ANY category, may carry it
+        foreach (var (category, _, message) in lines)
         {
             Assert.DoesNotContain(Token, message);
             Assert.DoesNotContain(Iban, message);
@@ -91,7 +85,6 @@ public class ConnectorsModuleLoggingTests
         Assert.All(lines, l => Assert.DoesNotContain(Token, l.Message));
     }
 
-    /// <summary>Walks the handler chain the factory builds for a named client — public API, no reflection.</summary>
     private static IEnumerable<HttpMessageHandler> HandlerChain(IServiceProvider provider, string clientName)
     {
         HttpMessageHandler? handler = provider.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(clientName);
@@ -118,10 +111,8 @@ public class ConnectorsModuleLoggingTests
 
         foreach (var connector in connectors)
         {
-            // Every IConnector the endpoint can see must be the decorator...
             var wrapper = Assert.IsType<LoggingConnector>(connector);
 
-            // ...and the typed HttpClient of whatever it wraps (named after the type) must have NO logging handler.
             var chain = HandlerChain(provider, wrapper.InnerType.Name).ToList();
             Assert.NotEmpty(chain);
             Assert.DoesNotContain(chain, IsFactoryLoggingHandler);
@@ -131,14 +122,12 @@ public class ConnectorsModuleLoggingTests
     [Fact]
     public async Task Without_RemoveAllLoggers_the_http_client_WOULD_log_the_token_url()
     {
-        // Control experiment: proves the leak is real and that the guard test above is sensitive to it.
         var logs = new CapturingLoggerProvider();
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace).AddProvider(logs));
         services.AddSingleton(TimeProvider.System);
         services.AddHttpClient<FioConnector>(c => c.BaseAddress = new Uri("https://fioapi.fio.cz/"))
             .ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(HttpStatusCode.OK, FioBody));
-        // deliberately NO .RemoveAllLoggers()
         await using var provider = services.BuildServiceProvider();
 
         Assert.Contains(HandlerChain(provider, nameof(FioConnector)), IsFactoryLoggingHandler);

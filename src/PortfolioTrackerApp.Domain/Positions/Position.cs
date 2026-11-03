@@ -5,19 +5,23 @@ using PortfolioTrackerApp.Domain.Monetary.Currency;
 namespace PortfolioTrackerApp.Domain.Positions;
 
 /// <summary>
-/// A quantity of an asset held at one source at one moment — the normalized form
-/// every connector translates into. Transient on the backend (per request); the
-/// client vault is where positions persist. Value object: no identity, equal by contents.
-/// Negative quantities are legal (short positions, liabilities).
+/// Quantity of one asset at one source at one moment; every connector translates into it.
+/// Value object. Invariants: source is required; negative quantities are legal (liabilities,
+/// shorts); it is valued only at a unit price in the asset's quote currency, since a price in
+/// another currency is a wiring bug, not an FX case. A cash position's quantity is its amount.
 /// </summary>
 public sealed record Position
 {
+    /// <summary>What is held, e.g. the VWCE asset or CZK cash.</summary>
     public Asset Asset { get; }
+
+    /// <summary>Units held; for cash, the amount. Negative for liabilities and shorts, e.g. 12.5 (VWCE) or 195.01 (CZK cash).</summary>
     public decimal Quantity { get; }
 
-    /// <summary>Which connector/source reported this position, e.g. "fio", "ibkr", "manual".</summary>
+    /// <summary>Identifier of the source that reported the position, e.g. "fio".</summary>
     public string Source { get; }
 
+    /// <summary>Moment the source reported the quantity, e.g. 2026-11-03T10:15:00+00:00.</summary>
     public DateTimeOffset AsOf { get; }
 
     public Position(Asset asset, decimal quantity, string source, DateTimeOffset asOf)
@@ -31,14 +35,9 @@ public sealed record Position
         AsOf = asOf;
     }
 
-    /// <summary>Cash positions: quantity is the amount, unit price is 1 by construction.</summary>
     public static Position OfCash(Money amount, string source, DateTimeOffset asOf) =>
         new(Asset.Cash(amount.Currency), amount.Amount, source, asOf);
 
-    /// <summary>
-    /// The position's worth at a given unit price. The price must be quoted in the
-    /// asset's quote currency — a mismatched price is a wiring bug, not an FX case.
-    /// </summary>
     public Money ValueAt(Money unitPrice)
     {
         if (unitPrice.Currency != Asset.QuoteCurrency)

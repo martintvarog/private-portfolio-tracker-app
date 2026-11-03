@@ -4,10 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace PortfolioTrackerApp.Api.Tests.LoggingTests;
 
-/// <summary>
-/// Records every log line from every category, with its scopes, so tests can assert what was — and wasn't — logged.
-/// Message = formatted message + exception (as the console logger prints) + " scopes: {...}" (as IncludeScopes prints).
-/// </summary>
 public sealed class CapturingLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
     private IExternalScopeProvider? _scopes;

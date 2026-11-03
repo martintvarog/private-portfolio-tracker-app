@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router'
 
-// A nav item is either a real page (has a path) or a placeholder marked `soon`.
 type NavItem = { label: string; to?: string; soon?: boolean }
 type NavSection = { title: string; items: NavItem[] }
 
@@ -39,9 +38,6 @@ export function Sidebar() {
           <div className="section">{section.title}</div>
           {section.items.map((item) =>
             item.to ? (
-              // NavLink = Link that knows if its path matches the URL. The class
-              // callback receives isActive, so the URL decides the highlight.
-              // `end` on "/" stops it matching every path (all start with "/").
               <NavLink
                 key={item.label}
                 to={item.to}

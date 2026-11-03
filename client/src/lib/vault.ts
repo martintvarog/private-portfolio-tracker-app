@@ -2,9 +2,6 @@ import type { ConnectorSyncResult } from './api.ts'
 import {decryptJson, deriveKey, encryptJson, randomBytes} from './crypto.ts'
 import {loadVaultRecord, saveVaultRecord, type VaultRecord} from './db.ts'
 
-// One connection per credential — Fio issues one token PER ACCOUNT, so two Fio
-// accounts = two connections with the same source and different accountLabel.
-// Created by the first successful sync (docs/glossary.md).
 export type Connection = {
   source: string
   credential: string
@@ -24,7 +21,6 @@ export async function vaultExists(): Promise<boolean> {
   return !!(await loadVaultRecord());
 }
 
-// salt → key → empty data → encrypt → save → return
 export async function createVault(passphrase: string): Promise<UnlockedVault> {
   const salt = randomBytes(saltLength)
   const key = await deriveKey(passphrase, salt)
@@ -36,9 +32,6 @@ export async function createVault(passphrase: string): Promise<UnlockedVault> {
   return { key, salt, data: emptyData }
 }
 
-// TODO (Martin): load record → deriveKey with the STORED salt → decryptJson
-// with the stored iv (throws = wrong passphrase — let it propagate, the
-// UnlockPage catch handles it). Return { key, salt, data }.
 export async function unlockVault(passphrase: string): Promise<UnlockedVault> {
     const vault = await loadExistingVaultRecord();
     const key = await deriveKey(passphrase, vault?.salt);
@@ -47,9 +40,8 @@ export async function unlockVault(passphrase: string): Promise<UnlockedVault> {
     return {key: key, salt: vault?.salt, data: data}
 }
 
-// TODO (Martin): encryptJson(vault.key, vault.data) → save record with the
-// SAME salt and the freshly returned iv/ciphertext.
 export async function persistVault(vault: UnlockedVault): Promise<void> {
+    // Keep the original salt: a new one derives a different key and the vault never opens again.
     const {iv, ciphertext} = await encryptJson(vault.key, vault.data);
     await saveVaultRecord({id: 'vault',  version: vaultVersion,salt: vault.salt, iv, ciphertext})
 }
