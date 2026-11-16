@@ -11,7 +11,7 @@ COPY Directory.Build.props ./
 COPY src/ ./src/
 RUN dotnet publish src/PortfolioTrackerApp.Api -c Release -o /publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 WORKDIR /app
 COPY --from=api-build /publish ./
 COPY --from=client-build /client/dist ./wwwroot/
